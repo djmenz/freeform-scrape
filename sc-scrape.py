@@ -128,6 +128,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	video = ""
 	yt_url = 'https://www.youtube.com/user/'+ artist_to_dl
 	links_full = []
+	yt_titles = []
 
 	with ydl:
 	    result = ydl.extract_info \
@@ -141,19 +142,20 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	        #loops entries to grab each video_url
 	        for i, item in enumerate(video):
 	            video = result['entries'][i]['webpage_url'] 
-	            #print(video)
-	            links_full.append(video)
+	            yt_title = result['entries'][i]['title']
+	            links_full.append([video,yt_title])
+	            print(yt_title)
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
 	for url in links_full:
 		try:
-			print(url)
+			print(url[0])
 			table.put_item(
 				Item={
-					'url_link': url,
-					'title' : 'TBA',
+					'url_link': url[0],
+					'title' : url[1],
 					'platform': 'youtube',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
@@ -174,19 +176,6 @@ def download_all_new_links():
 	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
 	urls_to_dl = url_response['Items']
 
-	soundcloud_ydl_opts = {
-		'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/%(title)s.%(ext)s',
-		}
-
-	youtube_ydl_opts = {
-	    'format': 'bestaudio/best',
-	    'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/%(title)s.%(ext)s',
-	    'postprocessors': [{
-	        'key': 'FFmpegExtractAudio',
-	        'preferredcodec': 'mp3',
-	        'preferredquality': '192',
-	    }],
-	}
 
 	print ("all urls to download now")
 	for url_row in urls_to_dl:
@@ -201,12 +190,21 @@ def download_all_new_links():
 
 		# Perform the download 
 		if (platform == 'youtube'):
+			youtube_ydl_opts  = {
+			    'format': 'bestaudio/best',
+			    'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
+			    'postprocessors': [{
+			        'key': 'FFmpegExtractAudio',
+			        'preferredcodec': 'mp3',
+			        'preferredquality': '192',
+			    }],
+			}
 			with youtube_dl.YoutubeDL(youtube_ydl_opts) as ydl:
 				ydl.download([url])
 				print("downloaded:" + url)
 
 				# Update the table if download was successful
-				table.put_item(
+				table.update_item(
 						Item={
 							'url_link': url,
 							'platform': platform,
@@ -216,12 +214,15 @@ def download_all_new_links():
 					)
 
 		elif (platform == 'soundcloud'):
+			soundcloud_ydl_opts = {
+			'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
+			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
 				ydl.download([url])
 				print("downloaded:" + url)
 
 				# Update the table if download was successful
-				table.put_item(
+				table.update_item(
 						Item={
 							'url_link': url,
 							'platform': platform,
@@ -265,16 +266,16 @@ def main():
 	if(to_run == 'all' or to_run == 'refresh'):
 		print('refreshing')
 		startTime_refresh = arrow.utcnow()
-		#refresh_link_database()
+		refresh_link_database()
 		stopTime_refresh = arrow.utcnow()
 	
 	if(to_run == 'all' or to_run == 'download'):
 		print('downloading')
 		startTime_download = arrow.utcnow()
-		#download_all_new_links()
+		download_all_new_links()
 		stopTime_download = arrow.utcnow()
 	
-	#organise_staging_area()
+	organise_staging_area()
 
 	if(to_run == 'all' or to_run == 'refresh'):
 		print('Completed Refresh Scripts in: {}'.format(stopTime_refresh - startTime_refresh))
