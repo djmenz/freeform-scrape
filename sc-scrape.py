@@ -5,16 +5,17 @@ from boto3.dynamodb.conditions import Key, Attr
 import json
 import decimal
 import os
+import sys
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver import Firefox
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 import time
+import arrow
 
 import youtube_dl
 from mutagen.mp3 import MP3
-
 
 def get_artists_to_download():
 
@@ -152,6 +153,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 			table.put_item(
 				Item={
 					'url_link': url,
+					'title' : 'TBA',
 					'platform': 'youtube',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
@@ -172,10 +174,6 @@ def download_all_new_links():
 	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
 	urls_to_dl = url_response['Items']
 
-	print ("all urls to download now")
-	for url_row in urls_to_dl:
-		print(url_row['url_link'])
-	
 	soundcloud_ydl_opts = {
 		'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/%(title)s.%(ext)s',
 		}
@@ -189,6 +187,11 @@ def download_all_new_links():
 	        'preferredquality': '192',
 	    }],
 	}
+
+	print ("all urls to download now")
+	for url_row in urls_to_dl:
+		print(url_row['url_link'])
+	
 
 	for url_row in urls_to_dl:
 		url = url_row['url_link']
@@ -254,9 +257,31 @@ def organise_staging_area():
 
 def main():
 
-	refresh_link_database()
-	download_all_new_links()
-	organise_staging_area()
+	try:
+		to_run = sys.argv[1]
+	except Exception as e:
+		to_run = 'all'
+
+	if(to_run == 'all' or to_run == 'refresh'):
+		print('refreshing')
+		startTime_refresh = arrow.utcnow()
+		#refresh_link_database()
+		stopTime_refresh = arrow.utcnow()
+	
+	if(to_run == 'all' or to_run == 'download'):
+		print('downloading')
+		startTime_download = arrow.utcnow()
+		#download_all_new_links()
+		stopTime_download = arrow.utcnow()
+	
+	#organise_staging_area()
+
+	if(to_run == 'all' or to_run == 'refresh'):
+		print('Completed Refresh Scripts in: {}'.format(stopTime_refresh - startTime_refresh))
+	
+	if(to_run == 'all' or to_run == 'download'):
+		print('Completed Download Scripts in: {}'.format(stopTime_download - startTime_download))
+
 
 	return
 	
