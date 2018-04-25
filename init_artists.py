@@ -16,16 +16,10 @@ def insert_artist(artist, platform):
 		}
 	)
 
-
 def main():
 
 	artists = [
-				['shimotsukei','soundcloud'],
-				['essi','soundcloud'],
-				['ThePrimeThanatos','youtube'],
-				['nekonationau','youtube'],
-				['nocv','soundcloud'],
-				['stereotypemusicoffcial','soundcloud'],
+
 			]
 
 
