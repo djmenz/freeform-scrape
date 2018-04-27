@@ -100,7 +100,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 		if (link[0:4] != 'http'):
 			full_link = 'https://soundcloud.com' + str(link)
 			#print(full_link)
-			links_full.append(full_link)
+			links_full.append([full_link,link.split('/')[2]])
 
 	#print(len(links_full))
 	
@@ -112,7 +112,8 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 		try:
 			table.put_item(
 				Item={
-					'url_link': url,
+					'url_link': url[0],
+					'title' : url[1],
 					'platform': 'soundcloud',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
@@ -239,8 +240,6 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 
 	return
 
-
-
 def download_all_new_links():
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
@@ -264,6 +263,7 @@ def download_all_new_links():
 		url = url_row['url_link']
 		platform = url_row['platform']
 		artist = url_row['artist']
+		title = url_row['title']
 		print("\nattempting download of:" + url)
 
 		# Perform the download 
@@ -282,12 +282,13 @@ def download_all_new_links():
 				print("downloaded:" + url)
 
 				# Update the table if download was successful
-				table.update_item(
+				table.put_item(
 						Item={
 							'url_link': url,
 							'platform': platform,
 							'artist': artist,
 							'downloaded': 'true',
+							'title' : title,
 						},
 					)
 
@@ -300,12 +301,13 @@ def download_all_new_links():
 				print("downloaded:" + url)
 
 				# Update the table if download was successful
-				table.update_item(
+				table.put_item(
 						Item={
 							'url_link': url,
 							'platform': platform,
 							'artist': artist,
 							'downloaded': 'true',
+							'title' : title,
 						},
 					)
 
@@ -319,18 +321,22 @@ def organise_staging_area():
 
 	for track in staging_tracks:
 		staging_file_location = (base_dir + 'staging/' + track)
-		audio = MP3(staging_file_location)
-		track_length_seconds = audio.info.length
-		print(track)
-		print(track_length_seconds)
+		try:
+			audio = MP3(staging_file_location)
+			track_length_seconds = audio.info.length
+			print(track)
+			print(track_length_seconds)
 
-		if track_length_seconds > 600:
-			print('set found')
-			os.rename(staging_file_location, base_dir + 'sets/' + track)
+			if track_length_seconds > 600:
+				print('set found')
+				os.rename(staging_file_location, base_dir + 'sets/' + track)
 
-		else:
-			print ('track found')
-			os.rename(staging_file_location, base_dir + 'tracks/' + track)
+			else:
+				print ('track found')
+				os.rename(staging_file_location, base_dir + 'tracks/' + track)
+
+		except Exception as e:
+			print("Failed reading length")
 
 	return
 
