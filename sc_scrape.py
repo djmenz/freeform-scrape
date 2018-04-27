@@ -16,6 +16,7 @@ import arrow
 
 import youtube_dl
 from mutagen.mp3 import MP3
+import init_artists
 
 def get_artists_to_download():
 
@@ -176,10 +177,15 @@ def download_all_new_links():
 	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
 	urls_to_dl = url_response['Items']
 
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		urls_to_dl.update(response['Items'])
 
 	print ("all urls to download now")
 	for url_row in urls_to_dl:
 		print(url_row['url_link'])
+	
+	print('Number of files to download:' + str(len(urls_to_dl)))
 	
 
 	for url_row in urls_to_dl:
@@ -256,12 +262,18 @@ def organise_staging_area():
 
 	return
 
+
 def main():
 
 	try:
 		to_run = sys.argv[1]
 	except Exception as e:
 		to_run = 'all'
+
+	if (to_run == 'init'):
+		print("init begins")
+		init_artists.main()
+		return
 
 	if(to_run == 'all' or to_run == 'refresh'):
 		print('refreshing')
@@ -283,9 +295,7 @@ def main():
 	if(to_run == 'all' or to_run == 'download'):
 		print('Completed Download Scripts in: {}'.format(stopTime_download - startTime_download))
 
-
 	return
-	
+
 if __name__ == "__main__":
 	main()
-
