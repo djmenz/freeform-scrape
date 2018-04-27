@@ -13,6 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 import time
 import arrow
+import urllib.request
 
 import youtube_dl
 from mutagen.mp3 import MP3
@@ -68,12 +69,12 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 
 	for zz in range(0,100):
 
-	    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-	    time.sleep(pause)
-	    new_height = driver.execute_script("return document.body.scrollHeight")
-	    if new_height == last_height:
-	        break
-	    last_height = new_height
+		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+		time.sleep(pause)
+		new_height = driver.execute_script("return document.body.scrollHeight")
+		if new_height == last_height:
+			break
+		last_height = new_height
 
 
 	html_doc = ""
@@ -123,7 +124,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 			continue
 	return
 
-def yt_refresh_link_database_for_artist(artist_to_dl):
+def yt_refresh_link_database_for_artist_slow(artist_to_dl):
 
 	ydl = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s', 'quiet':True,})
 	video = ""
@@ -132,20 +133,89 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	yt_titles = []
 
 	with ydl:
-	    result = ydl.extract_info \
-	    (yt_url,
-	    download=False) #We just want to extract the info
+		result = ydl.extract_info \
+		(yt_url,
+		download=False) #We just want to extract the info
 
-	    if 'entries' in result:
-	        # Can be a playlist or a list of videos
-	        video = result['entries']
+		if 'entries' in result:
+			# Can be a playlist or a list of videos
+			video = result['entries']
 
-	        #loops entries to grab each video_url
-	        for i, item in enumerate(video):
-	            video = result['entries'][i]['webpage_url'] 
-	            yt_title = result['entries'][i]['title']
-	            links_full.append([video,yt_title])
-	            print(yt_title)
+			#loops entries to grab each video_url
+			for i, item in enumerate(video):
+				video = result['entries'][i]['webpage_url'] 
+				yt_title = result['entries'][i]['title']
+				links_full.append([video,yt_title])
+				print(yt_title)
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	for url in links_full:
+		try:
+			print(url[0])
+			table.put_item(
+				Item={
+					'url_link': url[0],
+					'title' : url[1],
+					'platform': 'youtube-2',
+					'artist': artist_to_dl,
+					'downloaded': 'false',
+				},
+				ConditionExpression='attribute_not_exists(url_link)'
+			)
+		except Exception as e:
+			print('already in database')
+			continue
+
+	return
+
+
+def yt_artist_to_channel_id(artist_to_dl):
+	
+	# Get youtube api key
+	youtube_api_file = open("youtube_api_key","r")
+	youtube_api_key = youtube_api_file.readline()
+
+	url = 'https://www.googleapis.com/youtube/v3/channels?key={}&forUsername={}&part=id'.format(youtube_api_key, artist_to_dl)
+	inp = urllib.request.urlopen(url)
+	resp = json.load(inp)
+	channel_id = (resp['items'][0]['id'])
+	
+	return channel_id
+
+def yt_refresh_link_database_for_artist(artist_to_dl):
+
+	channel_id = yt_artist_to_channel_id(artist_to_dl)
+	
+	# Get youtube api key
+	youtube_api_file = open("youtube_api_key","r")
+	youtube_api_key = youtube_api_file.readline()
+
+	api_key = youtube_api_key
+
+	base_video_url = 'https://www.youtube.com/watch?v='
+	base_search_url = 'https://www.googleapis.com/youtube/v3/search?'
+
+	first_url = base_search_url+'key={}&channelId={}&part=snippet,id&order=date&maxResults=50'.format(api_key, channel_id)
+
+	links_full = []
+	url = first_url
+
+	while True:
+		inp = urllib.request.urlopen(url)
+		resp = json.load(inp)
+
+		for i in resp['items']:
+			if i['id']['kind'] == "youtube#video":
+				temp_url = (base_video_url + i['id']['videoId'])
+				links_full.append([temp_url, i['snippet']['title']])
+		try:
+			next_page_token = resp['nextPageToken']
+			url = first_url + '&pageToken={}'.format(next_page_token)
+		except:
+
+			break
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -165,9 +235,11 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 			)
 		except Exception as e:
 			print('already in database')
-			continue
+			continue	
 
 	return
+
+
 
 def download_all_new_links():
 
@@ -197,13 +269,13 @@ def download_all_new_links():
 		# Perform the download 
 		if (platform == 'youtube'):
 			youtube_ydl_opts  = {
-			    'format': 'bestaudio/best',
-			    'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
-			    'postprocessors': [{
-			        'key': 'FFmpegExtractAudio',
-			        'preferredcodec': 'mp3',
-			        'preferredquality': '192',
-			    }],
+				'format': 'bestaudio/best',
+				'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
+				'postprocessors': [{
+					'key': 'FFmpegExtractAudio',
+					'preferredcodec': 'mp3',
+					'preferredquality': '192',
+				}],
 			}
 			with youtube_dl.YoutubeDL(youtube_ydl_opts) as ydl:
 				ydl.download([url])
@@ -264,6 +336,11 @@ def organise_staging_area():
 
 
 def main():
+
+	# To remove
+	#yt_refresh_link_database_for_artist_2('ThePrimeThanatos')
+	#yt_refresh_link_database_for_artist('ThePrimeThanatos')
+	#return
 
 	try:
 		to_run = sys.argv[1]
