@@ -197,7 +197,6 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	# Get youtube api key
 	youtube_api_file = open("youtube_api_key","r")
 	youtube_api_key = youtube_api_file.readline()
-	youtube_api_key = 'AIzaSyBFW7keshll9aZg4j3t3tKm070zuZkTj5M'
 
 	api_key = youtube_api_key
 
