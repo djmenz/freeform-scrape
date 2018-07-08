@@ -50,7 +50,7 @@ def refresh_link_database():
 	print('---Youtube')
 	for artist in youtube_artists:
 		yt_refresh_link_database_for_artist(artist)
-		print('Have not Completed: ' + artist)
+		print('Have not quite completed: ' + artist)
 
 	return
 
@@ -117,6 +117,8 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 					'platform': 'soundcloud',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
+					'uploaded' : 'false',
+					'classification' : 'TBA',
 				},
 				ConditionExpression='attribute_not_exists(url_link)'
 			)
@@ -162,6 +164,8 @@ def yt_refresh_link_database_for_artist_slow(artist_to_dl):
 					'platform': 'youtube-2',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
+					'uploaded' : 'false',
+					'classification' : 'TBA',
 				},
 				ConditionExpression='attribute_not_exists(url_link)'
 			)
@@ -177,12 +181,13 @@ def yt_artist_to_channel_id(artist_to_dl):
 	# Get youtube api key
 	youtube_api_file = open("youtube_api_key","r")
 	youtube_api_key = youtube_api_file.readline()
-
 	url = 'https://www.googleapis.com/youtube/v3/channels?key={}&forUsername={}&part=id'.format(youtube_api_key, artist_to_dl)
+	
+	print(url)
+
 	inp = urllib.request.urlopen(url)
 	resp = json.load(inp)
 	channel_id = (resp['items'][0]['id'])
-	
 	return channel_id
 
 def yt_refresh_link_database_for_artist(artist_to_dl):
@@ -192,6 +197,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	# Get youtube api key
 	youtube_api_file = open("youtube_api_key","r")
 	youtube_api_key = youtube_api_file.readline()
+	youtube_api_key = 'AIzaSyBFW7keshll9aZg4j3t3tKm070zuZkTj5M'
 
 	api_key = youtube_api_key
 
@@ -231,6 +237,8 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 					'platform': 'youtube',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
+					'uploaded' : 'false',
+					'classification' : 'TBA',
 				},
 				ConditionExpression='attribute_not_exists(url_link)'
 			)
@@ -241,6 +249,8 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	return
 
 def download_all_new_links():
+
+	base_dir = '/home/daniel/Documents/freeform_scrape/staging/'
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -271,6 +281,7 @@ def download_all_new_links():
 			youtube_ydl_opts  = {
 				'format': 'bestaudio/best',
 				'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
+				'writeinfojson': True,
 				'postprocessors': [{
 					'key': 'FFmpegExtractAudio',
 					'preferredcodec': 'mp3',
@@ -278,7 +289,11 @@ def download_all_new_links():
 				}],
 			}
 			with youtube_dl.YoutubeDL(youtube_ydl_opts) as ydl:
-				ydl.download([url])
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				print('FILE IS:' + name_only)
+				result = ydl.download([url])
 				print("downloaded:" + url)
 
 				# Update the table if download was successful
@@ -289,6 +304,8 @@ def download_all_new_links():
 							'artist': artist,
 							'downloaded': 'true',
 							'title' : title,
+							'filename' : name_only,
+							'uploaded' : 'false',
 						},
 					)
 
@@ -297,6 +314,10 @@ def download_all_new_links():
 			'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				print('FILE IS:' + name_only)
 				ydl.download([url])
 				print("downloaded:" + url)
 
@@ -308,12 +329,16 @@ def download_all_new_links():
 							'artist': artist,
 							'downloaded': 'true',
 							'title' : title,
+							'filename' : name_only,
+							'uploaded' : 'false',
 						},
 					)
+		classify_single_track(url);
 
 	return
 
 def organise_staging_area():
+	# to remove this function - replaced with classifier
 	#check length of every file in staging area
 	# if under <600 seconds, move to track, otherwise move to sets
 	base_dir = '/home/daniel/Documents/freeform_scrape/'
@@ -340,12 +365,83 @@ def organise_staging_area():
 
 	return
 
+def classify_all_TBA_tracks():
+	#get all unclassified tracks
+	# call classfiy single track  
+	print("classifying any TBA tracks")
+
+	return
+
+def classify_single_track(link_to_classify):
+	#link_to_classify = 'https://soundcloud.com/shimotsukei/hella-9000-raverrose-tribute'
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	track = ""
+	# figure out how to get the filename from the track name
+	try:
+	    response = table.get_item(
+	        Key={
+	            'url_link': link_to_classify,
+	        }
+	    )
+	except ClientError as e:
+	    print(e.response['Error']['Message'])
+	else:
+	    item = response['Item']
+	    filename = response['Item']['filename']
+	    print('filename is:' + filename)
+
+
+	print(track)    
+	#determine if its a track or set ( if file isn't found, update the downloaded flag to false)
+	base_dir = '/home/daniel/Documents/freeform_scrape/'
+	staging_file_location = (base_dir + 'staging/' + filename + '.mp3')
+	try:
+		audio = MP3(staging_file_location)
+		track_length_seconds = audio.info.length
+		print('length: '+ str(track_length_seconds))
+
+		if track_length_seconds > 600:
+			print('set found')
+			classification ='set'
+
+		else:
+			print('track found')
+			classification = 'track'
+
+
+	except Exception as e:
+		print(staging_file_location)
+		print(e)
+
+	response = table.update_item(
+	    Key={
+	        'url_link': link_to_classify,
+	    },
+	    UpdateExpression="set classification = :r",
+	    ExpressionAttributeValues={
+	        ':r': classification,
+	    },
+	    ReturnValues="UPDATED_NEW"
+	)
+
+	return
+
+def upload_to_s3():
+	print('uploading files to S3 - skeleton')
+	# get all links that are classified, downloaded, but not uploaded
+
+
+	# confirm file isn't already present in S3 - if it is, skip the upload step.
+
+	# upload, change DB setting to uploaded, then remove from local disk.
+
 
 def main():
-
-	# To remove
-	#yt_refresh_link_database_for_artist_2('ThePrimeThanatos')
-	#yt_refresh_link_database_for_artist('ThePrimeThanatos')
+	
+	#classify_single_track('test')
 	#return
 
 	try:
@@ -369,8 +465,15 @@ def main():
 		startTime_download = arrow.utcnow()
 		download_all_new_links()
 		stopTime_download = arrow.utcnow()
+
+	if(to_run == 'all' or to_run == 's3upload'):
+		print('uploading to s3')
+		startTime_upload = arrow.utcnow()
+		upload_to_s3()
+		stopTime_upload = arrow.utcnow()	
 	
-	organise_staging_area()
+	#organise_staging_area()	
+	#classify_all_TBA_tracks()
 
 	if(to_run == 'all' or to_run == 'refresh'):
 		print('Completed Refresh Scripts in: {}'.format(stopTime_refresh - startTime_refresh))
