@@ -123,7 +123,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 				ConditionExpression='attribute_not_exists(url_link)'
 			)
 		except Exception as e:
-			print('already in database')
+			print('Error outting link in db' + str(e))
 			continue
 	return
 
@@ -182,9 +182,6 @@ def yt_artist_to_channel_id(artist_to_dl):
 	youtube_api_file = open("youtube_api_key","r")
 	youtube_api_key = youtube_api_file.readline()
 	url = 'https://www.googleapis.com/youtube/v3/channels?key={}&forUsername={}&part=id'.format(youtube_api_key, artist_to_dl)
-	
-	print(url)
-
 	inp = urllib.request.urlopen(url)
 	resp = json.load(inp)
 	channel_id = (resp['items'][0]['id'])
@@ -254,7 +251,7 @@ def download_all_new_links():
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
-	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false"))	
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
@@ -429,20 +426,60 @@ def classify_single_track(link_to_classify):
 	return
 
 def upload_to_s3():
-	print('uploading files to S3 - skeleton')
-	# get all links that are classified, downloaded, but not uploaded
+	s3 = boto3.resource('s3')
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	# get all links that are classified, downloaded, but not uploaded (add check for classifier)
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("true")&Attr('uploaded').eq("false"))	
+	urls_to_upload = url_response['Items']
+	
+	for url_row in urls_to_upload:
+		url = url_row['url_link']
+		filename = url_row['filename']
+		classification = url_row['classification']
+		print('Uploading:' + str(url))
+		print(filename)
+
+		# Upload a new file
+		base_dir = '/home/daniel/Documents/freeform_scrape/'
+		file_ex = '.mp3' # need to fix this properly
+		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
+
+		try:
+			data = open(staging_file_location, 'rb')
+			s3.Bucket('freeform-scrape').put_object(Key=classification+ '/' + filename + file_ex, Body=data)
+
+			# confirm file isn't already present in S3 - if it is, skip the upload step.
+
+			# upload, change DB setting to uploaded
+			response = table.update_item(
+		    Key={
+		        'url_link': url,
+		    },
+		    UpdateExpression="set uploaded = :r",
+		    ExpressionAttributeValues={
+		        ':r': 'true',
+		    },
+		    ReturnValues="UPDATED_NEW"
+		    )
+
+		    # Remove from local storage (change so only occurs on succesful upload)
+			if os.path.isfile(staging_file_location):
+			    os.remove(staging_file_location)
+			    print('file uploaded and removed from local system\n')
+			else:    ## Show an error ##
+			    print("Error: %s file not found" % staging_file_location)
+		except Exception as e:
+			print(e)
 
 
-	# confirm file isn't already present in S3 - if it is, skip the upload step.
 
-	# upload, change DB setting to uploaded, then remove from local disk.
 
 
 def main():
 	
-	#classify_single_track('test')
-	#return
-
 	try:
 		to_run = sys.argv[1]
 	except Exception as e:
@@ -479,6 +516,9 @@ def main():
 	
 	if(to_run == 'all' or to_run == 'download'):
 		print('Completed Download Scripts in: {}'.format(stopTime_download - startTime_download))
+
+	if(to_run == 'all' or to_run == 's3upload'):
+		print('Completed Download Scripts in: {}'.format(stopTime_upload - startTime_upload))
 
 	return
 
