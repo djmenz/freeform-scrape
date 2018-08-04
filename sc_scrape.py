@@ -219,16 +219,19 @@ def upload_to_s3():
 	print('Files to upload:' + str(len(urls_to_upload)))
 	
 	for url_row in urls_to_upload:
-		url = url_row['url_link']
-		filename = url_row['filename']
-		classification = url_row['classification']
-		print('Uploading:' + str(url))
-		print(filename)
+		try:
+			url = url_row['url_link']
+			filename = url_row['filename']
+			classification = url_row['classification']
+			print('Uploading:' + str(url))
+			print(filename)
 
-		# Upload a new file
-		base_dir = '/home/daniel/Documents/freeform_scrape/'
-		file_ex = '.mp3' # need to fix this properly
-		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
+			# Upload a new file
+			base_dir = '/home/daniel/Documents/freeform_scrape/'
+			file_ex = '.mp3' # need to fix this properly
+			staging_file_location = (base_dir + 'staging/' + filename + file_ex)
+		except Exception as e:
+			print(e)
 
 		try:
 			data = open(staging_file_location, 'rb')
