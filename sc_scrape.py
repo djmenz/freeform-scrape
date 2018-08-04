@@ -21,10 +21,12 @@ from mutagen.mp3 import MP3
 import init_artists
 import refresh_lib as rl
 
+base_fs_dir = '/home/daniel/Documents/freeform_scrape/'
+
 
 def download_all_new_links():
 
-	base_dir = '/home/daniel/Documents/freeform_scrape/staging/'
+	base_dir = base_fs_dir + 'staging/'
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -54,7 +56,7 @@ def download_all_new_links():
 		if (platform == 'youtube'):
 			youtube_ydl_opts  = {
 				'format': 'bestaudio/best',
-				'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
+				'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
 				'writeinfojson': True,
 				'postprocessors': [{
 					'key': 'FFmpegExtractAudio',
@@ -85,7 +87,7 @@ def download_all_new_links():
 
 		elif (platform == 'soundcloud'):
 			soundcloud_ydl_opts = {
-			'outtmpl': '/home/daniel/Documents/freeform_scrape/staging/[%(uploader)s]%(title)s.%(ext)s',
+			'outtmpl': base_fs_dir' + staging/[%(uploader)s]%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
 				info_dict = ydl.extract_info(url, download=False)
@@ -115,7 +117,7 @@ def organise_staging_area():
 	# to remove this function - replaced with classifier
 	#check length of every file in staging area
 	# if under <600 seconds, move to track, otherwise move to sets
-	base_dir = '/home/daniel/Documents/freeform_scrape/'
+	base_dir = base_fs_dir
 	staging_tracks = os.listdir(base_dir + 'staging')
 
 	for track in staging_tracks:
@@ -170,7 +172,7 @@ def classify_single_track(link_to_classify):
 
 	print(track)    
 	#determine if its a track or set ( if file isn't found, update the downloaded flag to false)
-	base_dir = '/home/daniel/Documents/freeform_scrape/'
+	base_dir = base_fs_dir
 	staging_file_location = (base_dir + 'staging/' + filename + '.mp3')
 	try:
 		audio = MP3(staging_file_location)
@@ -227,7 +229,7 @@ def upload_to_s3():
 			print(filename)
 
 			# Upload a new file
-			base_dir = '/home/daniel/Documents/freeform_scrape/'
+			base_dir = base_fs_dir
 			file_ex = '.mp3' # need to fix this properly
 			staging_file_location = (base_dir + 'staging/' + filename + file_ex)
 		except Exception as e:
@@ -307,3 +309,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
+
