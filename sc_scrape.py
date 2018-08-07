@@ -65,25 +65,28 @@ def download_all_new_links():
 				}],
 			}
 			with youtube_dl.YoutubeDL(youtube_ydl_opts) as ydl:
-				info_dict = ydl.extract_info(url, download=False)
-				filename = ydl.prepare_filename(info_dict)
-				name_only = filename[len(base_dir):].rsplit('.',1)[0]
-				print('FILE IS:' + name_only)
-				result = ydl.download([url])
-				print("downloaded:" + url)
+				try:
+					info_dict = ydl.extract_info(url, download=False)
+					filename = ydl.prepare_filename(info_dict)
+					name_only = filename[len(base_dir):].rsplit('.',1)[0]
+					print('FILE IS:' + name_only)
+					result = ydl.download([url])
+					print("downloaded:" + url)
 
-				# Update the table if download was successful
-				table.put_item(
-						Item={
-							'url_link': url,
-							'platform': platform,
-							'artist': artist,
-							'downloaded': 'true',
-							'title' : title,
-							'filename' : name_only,
-							'uploaded' : 'false',
-						},
-					)
+					# Update the table if download was successful
+					table.put_item(
+							Item={
+								'url_link': url,
+								'platform': platform,
+								'artist': artist,
+								'downloaded': 'true',
+								'title' : title,
+								'filename' : name_only,
+								'uploaded' : 'false',
+							},
+						)
+				except Exception as e:
+					print(e)
 
 		elif (platform == 'soundcloud'):
 			soundcloud_ydl_opts = {
