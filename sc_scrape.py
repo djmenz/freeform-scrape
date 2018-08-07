@@ -6,6 +6,8 @@ import json
 import decimal
 import os
 import sys
+from datetime import datetime
+from datetime import date
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver import Firefox
@@ -110,7 +112,7 @@ def download_all_new_links():
 								'uploaded' : 'false',
 							},
 						)
-					
+
 			classify_single_track(url);
 		
 		except Exception as e:
@@ -216,6 +218,11 @@ def classify_single_track(link_to_classify):
 def upload_to_s3():
 	s3 = boto3.resource('s3')
 
+	# for the summary email
+	today = date.today()
+	today_ord = today.toordinal()
+	email_body = "Files uploaded\n"
+
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
@@ -262,10 +269,17 @@ def upload_to_s3():
 			if os.path.isfile(staging_file_location):
 			    os.remove(staging_file_location)
 			    print('file uploaded and removed from local system\n')
+			    email_body += str(filename) + '\n' 
 			else:    ## Show an error ##
 			    print("Error: %s file not found" % staging_file_location)
 		except Exception as e:
 			print(e)
+
+	msg_client = boto3.client('sns',region_name='us-west-2')
+	topic = msg_client.create_topic(Name="crypto-news-daily")
+	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
+	mail_subject = 'Freeform-scrape:  ' + str(today)
+	msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject=mail_subject)
 
 
 def main():
