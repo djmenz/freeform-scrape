@@ -269,7 +269,7 @@ def upload_to_s3():
 			if os.path.isfile(staging_file_location):
 			    os.remove(staging_file_location)
 			    print('file uploaded and removed from local system\n')
-			    email_body += str(filename) + '\n' 
+			    email_body += str(classification) + ' : ' + str(filename) + '\n' 
 			else:    ## Show an error ##
 			    print("Error: %s file not found" % staging_file_location)
 		except Exception as e:
