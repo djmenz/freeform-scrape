@@ -257,27 +257,27 @@ def upload_to_s3():
 
 			# upload, change DB setting to uploaded
 			response = table.update_item(
-		    Key={
-		        'url_link': url,
-		    },
-		    UpdateExpression="set uploaded = :r",
-		    ExpressionAttributeValues={
-		        ':r': 'true',
-		    },
-		    ReturnValues="UPDATED_NEW"
-		    )
+			Key={
+				'url_link': url,
+			},
+			UpdateExpression="set uploaded = :r",
+			ExpressionAttributeValues={
+				':r': 'true',
+			},
+			ReturnValues="UPDATED_NEW"
+			)
 
-		    # Remove from local storage (change so only occurs on succesful upload)
+			# Remove from local storage (change so only occurs on succesful upload)
 			if os.path.isfile(staging_file_location):
-			    os.remove(staging_file_location)
-			    print('file uploaded and removed from local system\n')
-			    if (str(classification) == 'set'):
-			    	email_sets += str(classification) + ' : ' + str(filename) + '\n'
+				os.remove(staging_file_location)
+				print('file uploaded and removed from local system\n')
+				if (str(classification) == 'set'):
+					email_sets += str(classification) + ' : ' + str(filename) + '\n'
 				else:
-			    	email_tracks += str(classification) + ' : ' + str(filename) + '\n'
+					email_tracks += str(classification) + ' : ' + str(filename) + '\n'
 
 			else:    ## Show an error ##
-			    print("Error: %s file not found" % staging_file_location)
+				print("Error: %s file not found" % staging_file_location)
 		except Exception as e:
 			print(e)
 
