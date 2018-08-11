@@ -178,6 +178,10 @@ def yt_refresh_link_database_for_artist_slow(artist_to_dl):
 
 def yt_artist_to_channel_id(artist_to_dl):
 	
+	#Exception for Channel without username
+	if (artist_to_dl == 'Odysseus'):
+		return 'UCwoTj-pZgZZ8DInOXSSLMmA'
+	
 	# Get youtube api key
 	youtube_api_file = open("youtube_api_key","r")
 	youtube_api_key = youtube_api_file.readline()

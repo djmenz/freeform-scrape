@@ -222,6 +222,8 @@ def upload_to_s3():
 	today = date.today()
 	today_ord = today.toordinal()
 	email_body = "Files uploaded\n"
+	email_sets = ""
+	email_tracks = ""
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -269,12 +271,17 @@ def upload_to_s3():
 			if os.path.isfile(staging_file_location):
 			    os.remove(staging_file_location)
 			    print('file uploaded and removed from local system\n')
-			    email_body += str(classification) + ' : ' + str(filename) + '\n' 
+			    if (str(classification) == 'set'):
+			    	email_sets += str(classification) + ' : ' + str(filename) + '\n'
+				else:
+			    	email_tracks += str(classification) + ' : ' + str(filename) + '\n'
+
 			else:    ## Show an error ##
 			    print("Error: %s file not found" % staging_file_location)
 		except Exception as e:
 			print(e)
 
+	email_body += (email_sets + email_tracks)		
 	msg_client = boto3.client('sns',region_name='us-west-2')
 	topic = msg_client.create_topic(Name="crypto-news-daily")
 	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
