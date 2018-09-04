@@ -133,8 +133,7 @@ def download_information_only():
 
 	print ("all urls to download now:")
 	for url_row in urls_to_dl:
-			print(url_row['artist'])
-			print(url_row['title'])
+			print(url_row['artist'] + ': ' + url_row['title'])
 	print('Number of files to download:' + str(len(urls_to_dl)))
 
 	return
