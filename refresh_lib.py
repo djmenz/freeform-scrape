@@ -27,17 +27,17 @@ def refresh_link_database():
 	
 	for artist_row in artist_list:
 		if (artist_row['platform'] == 'soundcloud'):
-			soundcloud_artists.append(artist_row['artist'])
+			try:
+				soundcloud_artists.append(artist_row['artist'])
+			except:
+				print('error with:' + str(artist_row['artist']))
 		elif (artist_row['platform'] == 'youtube'):
-			youtube_artists.append(artist_row['artist'])
+			try:
+				youtube_artists.append(artist_row['artist'])
+			except:
+				print('error with:' + str(artist_row['artist']))
 		else:
 			print ('invalid platform in database')
-
-	print('---Youtube')
-	for artist in youtube_artists:
-		print('Refreshing: ' + artist)
-		yt_refresh_link_database_for_artist(artist)
-		print('Completed: ' + artist + '\n')
 
 	print('---Soundcloud')	
 	for artist in soundcloud_artists:
@@ -45,6 +45,11 @@ def refresh_link_database():
 		sc_refresh_link_database_for_artist(artist)
 		print('Completed: ' + artist + '\n')
 
+	print('---Youtube')
+	for artist in youtube_artists:
+		print('Refreshing: ' + artist)
+		yt_refresh_link_database_for_artist(artist)
+		print('Completed: ' + artist + '\n')
 	return
 
 def get_artists_to_download():
@@ -69,6 +74,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 	last_height = driver.execute_script("return document.body.scrollHeight")
 
 	for zz in range(0,100):
+		print("scrolling")
 
 		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 		time.sleep(pause)
@@ -132,55 +138,6 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 	print('links added: ' + str(counter))
 	return
 
-def yt_refresh_link_database_for_artist_slow(artist_to_dl):
-
-	ydl = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s', 'quiet':True,})
-	video = ""
-	yt_url = 'https://www.youtube.com/user/'+ artist_to_dl
-	links_full = []
-	yt_titles = []
-
-	with ydl:
-		result = ydl.extract_info \
-		(yt_url,
-		download=False) #We just want to extract the info
-
-		if 'entries' in result:
-			# Can be a playlist or a list of videos
-			video = result['entries']
-
-			#loops entries to grab each video_url
-			for i, item in enumerate(video):
-				video = result['entries'][i]['webpage_url'] 
-				yt_title = result['entries'][i]['title']
-				links_full.append([video,yt_title])
-				print(yt_title)
-
-	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
-	table = dynamodb.Table('music_url_archive')
-
-	for url in links_full:
-		try:
-			#print(url[0])
-			table.put_item(
-				Item={
-					'url_link': url[0],
-					'title' : url[1],
-					'platform': 'youtube-2',
-					'artist': artist_to_dl,
-					'downloaded': 'false',
-					'uploaded' : 'false',
-					'classification' : 'TBA',
-				},
-				ConditionExpression='attribute_not_exists(url_link)'
-			)
-		except Exception as e:
-			#print('already in database')
-			continue
-
-	return
-
-
 def yt_artist_to_channel_id(artist_to_dl):
 	
 	#Exception for Channel without username
@@ -228,15 +185,15 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 
 	for url in urls_by_date:
 		first_url = url
-
 		while True:
 			inp = urllib.request.urlopen(url)
 			resp = json.load(inp)
 
 			for i in resp['items']:
 				if i['id']['kind'] == "youtube#video":
-					temp_url = (base_video_url + i['id']['videoId'])
-					links_full.append([temp_url, i['snippet']['title']])
+					if i['snippet']['liveBroadcastContent'] == 'none':
+						temp_url = (base_video_url + i['id']['videoId'])
+						links_full.append([temp_url, i['snippet']['title']])
 			try:
 				next_page_token = resp['nextPageToken']
 				url = first_url + '&pageToken={}'.format(next_page_token)
@@ -271,22 +228,24 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	print('links added: ' + str(counter))
 	return
 
-# This is for testing purposes - just refreshes the 1st youtube artist only
+# This is for testing purposes - just refreshes the 1st soundcloud artist only
 def main():
-	print('Testing')
 	artist_list = get_artists_to_download()
 
-	youtube_artists = []
+	soundcloud_artists = []
 	
 	for artist_row in artist_list:
-		if (artist_row['platform'] == 'youtube'):
-			youtube_artists.append(artist_row['artist'])
+		if (artist_row['platform'] == 'soundcloud'):
+			soundcloud_artists.append(artist_row['artist'])
 		else:
 			print ('invalid platform in database')
 
-	print('---Youtube')
-	print(youtube_artists[4])
-	yt_refresh_link_database_for_artist(youtube_artists[4])
+	artist = soundcloud_artists[1]
+	print('---Soundcloud')	
+	print('Refreshing: ' + artist)
+	sc_refresh_link_database_for_artist(artist)
+	print('Completed: ' + artist + '\n')
+
 	
 
 if __name__ == "__main__":

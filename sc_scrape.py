@@ -46,7 +46,6 @@ def download_all_new_links():
 	
 	print('Number of files to download:' + str(len(urls_to_dl)))
 	
-
 	for url_row in urls_to_dl:
 		try:
 			url = url_row['url_link']
@@ -117,6 +116,26 @@ def download_all_new_links():
 		
 		except Exception as e:
 			print(e)
+
+	return
+
+def download_information_only():
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
+	urls_to_dl = url_response['Items']
+
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		urls_to_dl.update(response['Items'])
+
+	print ("all urls to download now:")
+	for url_row in urls_to_dl:
+			print(url_row['artist'])
+			print(url_row['title'])
+	print('Number of files to download:' + str(len(urls_to_dl)))
 
 	return
 
@@ -299,6 +318,10 @@ def main():
 	if (to_run == 'init'):
 		print("init begins")
 		init_artists.main()
+		return
+
+	if (to_run == 'info'):
+		download_information_only()
 		return
 
 	if(to_run == 'all' or to_run == 'refresh'):
