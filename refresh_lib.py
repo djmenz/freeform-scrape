@@ -228,7 +228,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	print('links added: ' + str(counter))
 	return
 
-# This is for testing purposes - just refreshes the 1st soundcloud artist only
+# This is for testing purposes - just refreshes the first soundcloud artist only
 def main():
 	artist_list = get_artists_to_download()
 
