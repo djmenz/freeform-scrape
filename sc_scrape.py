@@ -119,6 +119,111 @@ def download_all_new_links():
 
 	return
 
+def download_upload_all_new_links():
+
+	base_dir = base_fs_dir + 'staging/'
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false"))	
+	urls_to_dl = url_response['Items']
+
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		urls_to_dl.update(response['Items'])
+
+	print ("all urls to download now")
+	for url_row in urls_to_dl:
+		print(url_row['url_link'])
+	
+	print('Number of files to download:' + str(len(urls_to_dl)))
+	
+	for url_row in urls_to_dl:
+		try:
+			download_one_track(url_row)
+			s3upload_single_track(url_row)
+		except Exception as e:
+			print(e)
+
+	return
+
+def download_one_track(url_row):
+
+	base_dir = base_fs_dir + 'staging/'
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	try:
+		url = url_row['url_link']
+		platform = url_row['platform']
+		artist = url_row['artist']
+		title = url_row['title']
+		print("\nattempting download of:" + url)
+
+		# Perform the download 
+		if (platform == 'youtube'):
+			youtube_ydl_opts  = {
+				'format': 'bestaudio/best',
+				'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
+				'writeinfojson': True,
+				'postprocessors': [{
+					'key': 'FFmpegExtractAudio',
+					'preferredcodec': 'mp3',
+					'preferredquality': '192',
+				}],
+			}
+			with youtube_dl.YoutubeDL(youtube_ydl_opts) as ydl:
+				
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				print('FILE IS:' + name_only)
+				result = ydl.download([url])
+				print("downloaded:" + url)
+
+				# Update the table if download was successful
+				table.put_item(
+						Item={
+							'url_link': url,
+							'platform': platform,
+							'artist': artist,
+							'downloaded': 'true',
+							'title' : title,
+							'filename' : name_only,
+							'uploaded' : 'false',
+						},
+					)
+		elif (platform == 'soundcloud'):
+			soundcloud_ydl_opts = {
+			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
+			}
+			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				print('FILE IS:' + name_only)
+				ydl.download([url])
+				print("downloaded:" + url)
+
+				# Update the table if download was successful
+				table.put_item(
+						Item={
+							'url_link': url,
+							'platform': platform,
+							'artist': artist,
+							'downloaded': 'true',
+							'title' : title,
+							'filename' : name_only,
+							'uploaded' : 'false',
+						},
+					)
+
+		classify_single_track(url);
+
+	except Exception as e:
+		print(e)
+
+
 def download_information_only():
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
@@ -166,15 +271,8 @@ def organise_staging_area():
 
 	return
 
-def classify_all_TBA_tracks():
-	#get all unclassified tracks
-	# call classfiy single track  
-	print("classifying any TBA tracks")
-
-	return
 
 def classify_single_track(link_to_classify):
-	#link_to_classify = 'https://soundcloud.com/shimotsukei/hella-9000-raverrose-tribute'
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -307,6 +405,90 @@ def upload_to_s3():
 	msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject=mail_subject)
 
 
+def upload_to_s3_2():
+	s3 = boto3.resource('s3')
+
+	# for the summary email
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	# get all links that are classified, downloaded, but not uploaded (add check for classifier)
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("true")&Attr('uploaded').eq("false"))	
+	urls_to_upload = url_response['Items']
+
+	print('Files to upload:' + str(len(urls_to_upload)))
+	
+	for url_row in urls_to_upload:
+		s3upload_single_track(url_row)
+
+
+def s3upload_single_track(url_row):
+	s3 = boto3.resource('s3')
+
+	# for the summary email
+	today = date.today()
+	today_ord = today.toordinal()
+	email_body = "Files uploaded\n"
+	email_sets = ""
+	email_tracks = ""
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	try:
+		url = url_row['url_link']
+		filename = url_row['filename']
+		classification = url_row['classification']
+		print('Uploading:' + str(url))
+		print(filename)
+
+		# Upload a new file
+		base_dir = base_fs_dir
+		file_ex = '.mp3' # need to fix this properly
+		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
+	except Exception as e:
+		print(e)
+
+	try:
+		data = open(staging_file_location, 'rb')
+		s3.Bucket('freeform-scrape').put_object(Key=classification+ '/' + filename + file_ex, Body=data)
+
+		# confirm file isn't already present in S3 - if it is, skip the upload step.
+
+		# upload, change DB setting to uploaded
+		response = table.update_item(
+		Key={
+			'url_link': url,
+		},
+		UpdateExpression="set uploaded = :r",
+		ExpressionAttributeValues={
+			':r': 'true',
+		},
+		ReturnValues="UPDATED_NEW"
+		)
+
+		# Remove from local storage (change so only occurs on succesful upload)
+		if os.path.isfile(staging_file_location):
+			os.remove(staging_file_location)
+			print('file uploaded and removed from local system\n')
+			if (str(classification) == 'set'):
+				email_sets += str(classification) + ' : ' + str(filename) + '\n'
+			else:
+				email_tracks += str(classification) + ' : ' + str(filename) + '\n'
+
+		else:    ## Show an error ##
+			print("Error: %s file not found" % staging_file_location)
+	except Exception as e:
+		print(e)
+
+	email_body += (email_sets + email_tracks)		
+	msg_client = boto3.client('sns',region_name='us-west-2')
+	topic = msg_client.create_topic(Name="crypto-news-daily")
+	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
+	mail_subject = 'Freeform-scrape:  ' + str(today)
+	msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject=mail_subject)
+
+
 def main():
 	
 	try:
@@ -339,7 +521,14 @@ def main():
 		print('uploading to s3')
 		startTime_upload = arrow.utcnow()
 		upload_to_s3()
-		stopTime_upload = arrow.utcnow()	
+		stopTime_upload = arrow.utcnow()
+
+	if(to_run == 'newall'):
+		startTime_upload = arrow.utcnow()
+		download_upload_all_new_links()
+		stopTime_upload = arrow.utcnow()
+
+
 	
 	#organise_staging_area()	
 	#classify_all_TBA_tracks()
