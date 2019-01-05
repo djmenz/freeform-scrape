@@ -139,14 +139,24 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 	return
 
 def yt_artist_to_channel_id(artist_to_dl):
+
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_archive_artist')
+	artists_response = table.scan(FilterExpression=Attr('artist').eq(artist_to_dl))
+	artist_info = artists_response['Items'][0]
+
+	print(artist_info)
 	
-	#Exception for Channel without username
-	if (artist_to_dl == 'Odysseus'):
-		return 'UCwoTj-pZgZZ8DInOXSSLMmA'
-	
+	#If channelid attribute exists, use that
+	try:
+		return artist_info['channelid']
+	except KeyError as e:
+		pass
+
 	# Get youtube api key
 	youtube_api_file = open("youtube_api_key","r")
-	youtube_api_key = youtube_api_file.readline()
+	youtube_api_key = (youtube_api_file.readline()).rstrip('\n')
 	url = 'https://www.googleapis.com/youtube/v3/channels?key={}&forUsername={}&part=id'.format(youtube_api_key, artist_to_dl)
 	inp = urllib.request.urlopen(url)
 	resp = json.load(inp)
@@ -159,7 +169,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	
 	# Get youtube api key
 	youtube_api_file = open("youtube_api_key","r")
-	youtube_api_key = youtube_api_file.readline()
+	youtube_api_key = (youtube_api_file.readline()).rstrip('\n')
 
 	api_key = youtube_api_key
 
@@ -184,6 +194,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 	links_full = []
 
 	for url in urls_by_date:
+		yc = 0
 		first_url = url
 		while True:
 			inp = urllib.request.urlopen(url)
@@ -193,12 +204,14 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 				if i['id']['kind'] == "youtube#video":
 					if i['snippet']['liveBroadcastContent'] == 'none':
 						temp_url = (base_video_url + i['id']['videoId'])
+						#print(i['snippet']['title'])
 						links_full.append([temp_url, i['snippet']['title']])
+						yc +=1
 			try:
 				next_page_token = resp['nextPageToken']
 				url = first_url + '&pageToken={}'.format(next_page_token)
 			except:
-
+				print(yc)
 				break
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
