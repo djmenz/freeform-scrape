@@ -38,7 +38,7 @@ def download_all_new_links():
 
 	while 'LastEvaluatedKey' in url_response:
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
-		urls_to_dl.update(response['Items'])
+		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
 	for url_row in urls_to_dl:
@@ -65,7 +65,7 @@ def download_upload_all_new_links():
 
 	while 'LastEvaluatedKey' in url_response:
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
-		urls_to_dl.update(response['Items'])
+		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
 	for url_row in urls_to_dl:
@@ -169,7 +169,7 @@ def download_information_only():
 
 	while 'LastEvaluatedKey' in url_response:
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
-		urls_to_dl.update(response['Items'])
+		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now:")
 	for url_row in urls_to_dl:
