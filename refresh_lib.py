@@ -21,6 +21,7 @@ from mutagen.mp3 import MP3
 
 def refresh_link_database():
 	artist_list = get_artists_to_download()
+	soundcloud_refresh_enabled = True
 
 	youtube_artists = []
 	soundcloud_artists = []
@@ -39,11 +40,12 @@ def refresh_link_database():
 		else:
 			print ('invalid platform in database')
 
-	print('---Soundcloud')	
-	for artist in soundcloud_artists:
-		print('Refreshing: ' + artist)
-		sc_refresh_link_database_for_artist(artist)
-		print('Completed: ' + artist + '\n')
+	if(soundcloud_refresh_enabled):
+		print('---Soundcloud')	
+		for artist in soundcloud_artists:
+			print('Refreshing: ' + artist)
+			sc_refresh_link_database_for_artist(artist)
+			print('Completed: ' + artist + '\n')
 
 	print('---Youtube')
 	for artist in youtube_artists:
@@ -64,7 +66,6 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 	non_mixes = ['reposts','likes','albums','sets','tracks','following','followers']
 	options = Options()
 	options.add_argument('-headless')
-	#driver = webdriver.Firefox()
 	driver = Firefox(executable_path='geckodriver', firefox_options=options)
 	url1 = 'https://soundcloud.com/' + artist_to_dl + '/tracks'
 	driver.get(url1)

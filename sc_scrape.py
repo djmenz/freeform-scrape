@@ -164,6 +164,7 @@ def download_information_only():
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
+	#Get download items
 	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
 	urls_to_dl = url_response['Items']
 
@@ -171,10 +172,29 @@ def download_information_only():
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
 		urls_to_dl.extend(url_response['Items'])
 
-	print ("all urls to download now:")
-	for url_row in urls_to_dl:
-			print(url_row['artist'] + ': ' + url_row['title'])
+	#Get track items
+	url_response = table.scan(FilterExpression=Attr('classification').eq("track"))	
+	tracks_downloaded = url_response['Items']
+
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		tracks_downloaded.extend(url_response['Items'])
+
+	#Get set items
+	url_response = table.scan(FilterExpression=Attr('classification').eq("set"))	
+	sets_downloaded = url_response['Items']
+
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		sets_downloaded.extend(url_response['Items'])
+
+	#print ("all urls to download now:")
+	#for url_row in urls_to_dl:
+	#		print(url_row['artist'] + ': ' + url_row['title'])
 	print('Number of files to download:' + str(len(urls_to_dl)))
+	print('Number of tracks downloaded:' + str(len(tracks_downloaded)))
+	print('Number of sets downloaded:' + str(len(sets_downloaded)))
+
 
 	return
 
