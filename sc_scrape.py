@@ -169,7 +169,7 @@ def download_information_only():
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false"))
 		urls_to_dl.extend(url_response['Items'])
 
 	#Get track items
@@ -177,7 +177,7 @@ def download_information_only():
 	tracks_downloaded = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('classification').eq("track"))
 		tracks_downloaded.extend(url_response['Items'])
 
 	#Get set items
@@ -185,7 +185,7 @@ def download_information_only():
 	sets_downloaded = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('classification').eq("set"))
 		sets_downloaded.extend(url_response['Items'])
 
 	#print ("all urls to download now:")
@@ -299,10 +299,11 @@ def upload_to_s3():
 	urls_to_upload = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("true")&Attr('uploaded').eq("false"))
 		urls_to_upload.extend(url_response['Items'])
 
 	print('Files to upload:' + str(len(urls_to_upload)))
+	print(urls_to_upload)
 	
 	for url_row in urls_to_upload:
 		s3upload_single_track(url_row)
