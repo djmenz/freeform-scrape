@@ -303,7 +303,6 @@ def upload_to_s3():
 		urls_to_upload.extend(url_response['Items'])
 
 	print('Files to upload:' + str(len(urls_to_upload)))
-	print(urls_to_upload)
 	
 	for url_row in urls_to_upload:
 		s3upload_single_track(url_row)
@@ -332,6 +331,7 @@ def s3upload_single_track(old_url_row):
 		file_ex = '.mp3' # need to fix this properly
 		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
 	except Exception as e:
+		print(filename)
 		print(e)
 
 	try:
