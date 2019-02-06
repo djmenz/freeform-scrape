@@ -298,6 +298,10 @@ def upload_to_s3():
 	url_response = table.scan(FilterExpression=Attr('downloaded').eq("true")&Attr('uploaded').eq("false"))	
 	urls_to_upload = url_response['Items']
 
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(FilterExpression=Attr('downloaded').eq("true")&Attr('uploaded').eq("false"))
+		urls_to_upload.extend(url_response['Items'])
+
 	print('Files to upload:' + str(len(urls_to_upload)))
 	
 	for url_row in urls_to_upload:
