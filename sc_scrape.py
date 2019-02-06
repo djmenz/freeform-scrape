@@ -315,7 +315,8 @@ def s3upload_single_track(old_url_row):
 	table = dynamodb.Table('music_url_archive')
 
 	#refresh file name from dynamodb table
-	artists_response = table.scan(FilterExpression=Attr('url_link').eq(old_url_row['url_link']))
+	url_response = table.scan(FilterExpression=Attr('url_link').eq(old_url_row['url_link']))
+	artists_response = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('url_link').eq(old_url_row['url_link']))
