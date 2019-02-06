@@ -64,7 +64,7 @@ def download_upload_all_new_links():
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false"))
 		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
