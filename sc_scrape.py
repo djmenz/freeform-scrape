@@ -399,7 +399,7 @@ def send_notification_email():
 	to_notify_rows = response['Items']
 
 	while 'LastEvaluatedKey' in response:
-		response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('notified').eq('false'))
+		response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'],FilterExpression=Attr('notified').eq('false'))
 		to_notify_rows.extend(response['Items'])
 
 	for row in to_notify_rows:
