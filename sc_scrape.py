@@ -37,7 +37,7 @@ def download_all_new_links():
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false"))
 		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
@@ -322,10 +322,9 @@ def s3upload_single_track(old_url_row):
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('url_link').eq(old_url_row['url_link']))
 		artists_response.extend(url_response['Items'])
 
-	artist_info = artists_response['Items'][0]
+	artist_info = artists_response[0]
 	url_row = artist_info
 
-	print('url_row: ' + url_row)
 	try:
 		url = url_row['url_link']
 		filename = url_row['filename']
@@ -398,6 +397,10 @@ def send_notification_email():
 	#refresh file name from dynamodb table
 	response = table.scan(FilterExpression=Attr('notified').eq('false'))
 	to_notify_rows = response['Items']
+
+	while 'LastEvaluatedKey' in response:
+		response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('notified').eq('false'))
+		to_notify_rows.extend(response['Items'])
 
 	for row in to_notify_rows:
 		print(row)
