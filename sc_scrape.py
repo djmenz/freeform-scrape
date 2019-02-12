@@ -286,6 +286,16 @@ def classify_single_track(link_to_classify, extension):
 	except Exception as e:
 		print('probably not an MP3')
 		print(extension)
+		response = table.update_item(
+	    Key={
+	        'url_link': link_to_classify,
+	    },
+	    UpdateExpression="set downloaded = :r",
+	    ExpressionAttributeValues={
+	        ':r': skip_type,
+	    },
+	    ReturnValues="UPDATED_NEW"
+
 		print(e)
 
 	return
