@@ -94,7 +94,7 @@ def download_one_track(url_row):
 		artist = url_row['artist']
 		title = url_row['title']
 		print("\nattempting download of:" + url)
-		name_only = ""
+		ext = ""
 
 		# Perform the download 
 		if (platform == 'youtube'):
@@ -113,6 +113,7 @@ def download_one_track(url_row):
 				info_dict = ydl.extract_info(url, download=False)
 				filename = ydl.prepare_filename(info_dict)
 				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				ext = filename[len(base_dir):].rsplit('.',1)[1]
 				print('FILE IS:' + name_only)
 				result = ydl.download([url])
 				print("downloaded:" + url)
@@ -154,7 +155,7 @@ def download_one_track(url_row):
 						},
 					)
 
-		classify_single_track(url,name_only);
+		classify_single_track(url,ext);
 
 	except Exception as e:
 		print(e)
@@ -228,7 +229,7 @@ def organise_staging_area():
 	return
 
 
-def classify_single_track(link_to_classify, full_filename):
+def classify_single_track(link_to_classify, extension):
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -283,7 +284,7 @@ def classify_single_track(link_to_classify, full_filename):
 
 	except Exception as e:
 		print('probably not an MP3')
-		print(full_filename)
+		print(extension)
 		print(e)
 
 	return
