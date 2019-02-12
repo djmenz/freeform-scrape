@@ -255,7 +255,7 @@ def classify_single_track(link_to_classify, extension):
 	print(track)    
 	#determine if its a track or set ( if file isn't found, update the downloaded flag to false)
 	
-	if(extension == '.mp3'):
+	if(str(extension) == 'mp3'):
 		base_dir = base_fs_dir
 		staging_file_location = (base_dir + 'staging/' + filename + '.mp3')
 		try:
@@ -289,7 +289,7 @@ def classify_single_track(link_to_classify, extension):
 			print('probably not an MP3')
 			print(e)
 
-	if(extension == '.wav'):
+	if(str(extension) == 'wav'):
 		try:
 			response = table.update_item(
 		    Key={
