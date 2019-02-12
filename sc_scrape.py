@@ -113,9 +113,7 @@ def download_one_track(url_row):
 				info_dict = ydl.extract_info(url, download=False)
 				filename = ydl.prepare_filename(info_dict)
 				name_only = filename[len(base_dir):].rsplit('.',1)[0]
-				ext = filename
-				print('ExTis')
-				print(ext)
+				ext = filename.rsplit('.')[-1:]
 				print('FILE IS:' + name_only)
 				result = ydl.download([url])
 				print("downloaded:" + url)
@@ -140,6 +138,7 @@ def download_one_track(url_row):
 				info_dict = ydl.extract_info(url, download=False)
 				filename = ydl.prepare_filename(info_dict)
 				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				ext = filename.rsplit('.')[-1:]
 				print('FILE IS:' + name_only)
 				ydl.download([url])
 				print("downloaded:" + url)
