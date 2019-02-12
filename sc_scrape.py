@@ -232,6 +232,7 @@ def organise_staging_area():
 
 def classify_single_track(link_to_classify, extension):
 
+	print('ext:' + extension)
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
@@ -317,6 +318,7 @@ def classify_single_track(link_to_classify, extension):
 			print(e)
 
 	else:
+		print('not mp3 or wav')
 		response = table.update_item(
 		    Key={
 		        'url_link': link_to_classify,
