@@ -232,7 +232,6 @@ def organise_staging_area():
 
 def classify_single_track(link_to_classify, extension):
 
-	print('ext:' + extension)
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
@@ -254,82 +253,40 @@ def classify_single_track(link_to_classify, extension):
 
 	print(track)    
 	#determine if its a track or set ( if file isn't found, update the downloaded flag to false)
-	
-	if(str(extension) == 'mp3'):
-		base_dir = base_fs_dir
-		staging_file_location = (base_dir + 'staging/' + filename + '.mp3')
-		try:
-			audio = MP3(staging_file_location)
-			track_length_seconds = audio.info.length
-			print('length: '+ str(track_length_seconds))
+	base_dir = base_fs_dir
+	staging_file_location = (base_dir + 'staging/' + filename + '.mp3')
+	try:
+		audio = MP3(staging_file_location)
+		track_length_seconds = audio.info.length
+		print('length: '+ str(track_length_seconds))
 
-			if track_length_seconds > 600:
-				print('set found')
-				classification ='set'
+		if track_length_seconds > 600:
+			print('set found')
+			classification ='set'
 
-			elif track_length_seconds <= 600:
-				print('track found')
-				classification = 'track'
-			else: 
-				print('Non mp3 found')
-				classification = 'TBA'
+		elif track_length_seconds <= 600:
+			print('track found')
+			classification = 'track'
+		else: 
+			print('Non mp3 found')
+			classification = 'TBA'
 
-			response = table.update_item(
-		    Key={
-		        'url_link': link_to_classify,
-		    },
-		    UpdateExpression="set classification = :r",
-		    ExpressionAttributeValues={
-		        ':r': classification,
-		    },
-		    ReturnValues="UPDATED_NEW"
-		)
-
-		except Exception as e:
-			print('probably not an MP3')
-			print(e)
-
-	if(str(extension) == 'wav'):
-		try:
-			response = table.update_item(
-		    Key={
-		        'url_link': link_to_classify,
-		    },
-		    UpdateExpression="set classification = :r",
-		    ExpressionAttributeValues={
-		        ':r': classification,
-		    },
-		    ReturnValues="UPDATED_NEW"
-			)
-
-			response = table.update_item(
-		    Key={
-		        'url_link': link_to_classify,
-		    },
-		    UpdateExpression="set downloaded = :r",
-		    ExpressionAttributeValues={
-		        ':r': 'skip_wav',
-		    },
-		    ReturnValues="UPDATED_NEW"
-			)
-
-		except Exception as e:
-			print('probably not a WAV')
-			print(e)
-
-	else:
-		print('not mp3 or wav')
 		response = table.update_item(
-		    Key={
-		        'url_link': link_to_classify,
-		    },
-		    UpdateExpression="set downloaded = :r",
-		    ExpressionAttributeValues={
-		        ':r': 'skip_type',
-		    },
-		    ReturnValues="UPDATED_NEW"
-		 )
+	    Key={
+	        'url_link': link_to_classify,
+	    },
+	    UpdateExpression="set classification = :r",
+	    ExpressionAttributeValues={
+	        ':r': classification,
+	    },
+	    ReturnValues="UPDATED_NEW"
+	)
 
+
+	except Exception as e:
+		print('probably not an MP3')
+		print(extension)
+		print(e)
 
 	return
 
