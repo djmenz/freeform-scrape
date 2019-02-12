@@ -289,7 +289,7 @@ def classify_single_track(link_to_classify, extension):
 			print(e)
 
 	if(extension == '.wav'):
-
+		try:
 			response = table.update_item(
 		    Key={
 		        'url_link': link_to_classify,
