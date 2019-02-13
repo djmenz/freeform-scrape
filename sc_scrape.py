@@ -298,7 +298,7 @@ def classify_single_track(link_to_classify, extension):
 				stdout, stderr = process.communicate()
 				matches = re.search(r"Duration:\s{1}(?P<hours>\d+?):(?P<minutes>\d+?):(?P<seconds>\d+\.\d+?),", stdout.decode(), re.DOTALL).groupdict()
 
-				track_length_seconds = float(matches['seconds'] + (60*float(matches['minutes'])) + (3600*float(matches['hours']))
+				track_length_seconds = (float(matches['seconds']) + (60*float(matches['minutes'])) + (3600*float(matches['hours'])))
 
 				print('length: '+ str(track_length_seconds))
 
