@@ -17,6 +17,9 @@ import time
 import arrow
 import urllib.request
 
+import subprocess
+import re
+
 import youtube_dl
 from mutagen.mp3 import MP3
 
@@ -253,6 +256,7 @@ def classify_single_track(link_to_classify, extension):
 
 	print(track)    
 	#determine if its a track or set ( if file isn't found, update the downloaded flag to false)
+	# Assume it is an mp3, as 95% are mp3s
 	base_dir = base_fs_dir
 	staging_file_location = (base_dir + 'staging/' + filename + '.mp3')
 	try:
@@ -280,25 +284,77 @@ def classify_single_track(link_to_classify, extension):
 	        ':r': classification,
 	    },
 	    ReturnValues="UPDATED_NEW"
-	)
+		)
 
 
 	except Exception as e:
 		print('probably not an MP3')
-		print(extension)
-		response = table.update_item(
-	    Key={
-	        'url_link': link_to_classify,
-	    },
-	    UpdateExpression="set downloaded = :r",
-	    ExpressionAttributeValues={
-	        ':r': skip_type,
-	    },
-	    ReturnValues="UPDATED_NEW"
+		if (extension == 'wav'):
+			print('classifying wav file')
+			staging_file_location = (base_dir + 'staging/' + filename + '.wav')
 
-		print(e)
+			try:
+				process = subprocess.Popen(['ffmpeg',  '-i', staging_file_location], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+				stdout, stderr = process.communicate()
+				matches = re.search(r"Duration:\s{1}(?P<hours>\d+?):(?P<minutes>\d+?):(?P<seconds>\d+\.\d+?),", stdout.decode(), re.DOTALL).groupdict()
+
+				track_length_seconds = float(matches['seconds'] + (60*matches['minutes']) + (3600*matches['hours']))
+
+				print('length: '+ str(track_length_seconds))
+
+				if track_length_seconds > 600:
+					print('set found')
+					classification ='set'
+
+				elif track_length_seconds <= 600:
+					print('track found')
+					classification = 'track'
+				else: 
+					print('Non mp3 found')
+					classification = 'TBA'
+
+				response = table.update_item(
+			    Key={
+			        'url_link': link_to_classify,
+			    },
+			    UpdateExpression="set classification = :r",
+			    ExpressionAttributeValues={
+			        ':r': classification,
+			    },
+			    ReturnValues="UPDATED_NEW"
+				)
+
+			except Exception as e:
+				print(e)
+				response = table.update_item(
+			    Key={
+			        'url_link': link_to_classify,
+			    },
+			    UpdateExpression="set downloaded = :r",
+			    ExpressionAttributeValues={
+			        ':r': 'skip',
+			    },
+			    ReturnValues="UPDATED_NEW"
+			    )
+
+
+		else:
+			response = table.update_item(
+			    Key={
+			        'url_link': link_to_classify,
+			    },
+			    UpdateExpression="set downloaded = :r",
+			    ExpressionAttributeValues={
+			        ':r': 'skip_u',
+			    },
+			    ReturnValues="UPDATED_NEW"
+			    )
 
 	return
+
+
+
+
 
 
 def upload_to_s3():
@@ -348,8 +404,15 @@ def s3upload_single_track(old_url_row):
 
 		# Upload a new file
 		base_dir = base_fs_dir
+
+
 		file_ex = '.mp3' # need to fix this properly
 		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
+
+		if(os.path.isfile(staging_file_location) == False):
+			staging_file_location = (base_dir + 'staging/' + filename + '.wav')
+
+
 	except Exception as e:
 		print(filename)
 		print(e)
