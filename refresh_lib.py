@@ -18,10 +18,14 @@ import urllib.request
 import youtube_dl
 from mutagen.mp3 import MP3
 
+def quick_refresh_link_database():
+	refresh_link_database(2019)
+	return
 
-def refresh_link_database():
+def refresh_link_database(starting_year=2009):
 	artist_list = get_artists_to_download()
 	soundcloud_refresh_enabled = True
+	youtube_refresh_enabled = True
 
 	youtube_artists = []
 	soundcloud_artists = []
@@ -47,11 +51,13 @@ def refresh_link_database():
 			sc_refresh_link_database_for_artist(artist)
 			print('Completed: ' + artist + '\n')
 
-	print('---Youtube')
-	for artist in youtube_artists:
-		print('Refreshing: ' + artist)
-		yt_refresh_link_database_for_artist(artist)
-		print('Completed: ' + artist + '\n')
+	if(youtube_refresh_enabled):
+		print('---Youtube')
+		for artist in youtube_artists:
+			print('Refreshing: ' + artist)
+			yt_refresh_link_database_for_artist(artist, starting_year)
+			print('Completed: ' + artist + '\n')
+
 	return
 
 def get_artists_to_download():
@@ -141,7 +147,6 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 
 def yt_artist_to_channel_id(artist_to_dl):
 
-
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_archive_artist')
 	artists_response = table.scan(FilterExpression=Attr('artist').eq(artist_to_dl))
@@ -164,7 +169,7 @@ def yt_artist_to_channel_id(artist_to_dl):
 	channel_id = (resp['items'][0]['id'])
 	return channel_id
 
-def yt_refresh_link_database_for_artist(artist_to_dl):
+def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 
 	channel_id = yt_artist_to_channel_id(artist_to_dl)
 	
@@ -180,7 +185,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl):
 
 	# Searches all years between 2009 - 2021
 	years_RFC3339_pairs = []
-	for x in range(2009,2021):
+	for x in range(starting_year,2021):
 		start_year = (str(x)+'-01-01T00:00:00Z')
 		finish_year = (str(x+1)+'-01-01T00:00:00Z')
 		years_RFC3339_pairs.append([start_year,finish_year])

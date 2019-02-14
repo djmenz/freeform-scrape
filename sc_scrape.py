@@ -525,6 +525,10 @@ def main():
 		download_information_only()
 		return
 
+	if (to_run == 'qrefresh'):
+		rl.quick_refresh_link_database()
+		return
+
 	if(to_run == 'all' or to_run == 'refresh'):
 		print('refreshing')
 		startTime_refresh = arrow.utcnow()
