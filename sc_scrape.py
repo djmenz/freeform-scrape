@@ -405,12 +405,12 @@ def s3upload_single_track(old_url_row):
 		# Upload a new file
 		base_dir = base_fs_dir
 
-
 		file_ex = '.mp3' # need to fix this properly
 		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
 
 		if(os.path.isfile(staging_file_location) == False):
-			staging_file_location = (base_dir + 'staging/' + filename + '.wav')
+			file_ex = '.wav'
+			staging_file_location = (base_dir + 'staging/' + filename + file_ex)
 
 
 	except Exception as e:
