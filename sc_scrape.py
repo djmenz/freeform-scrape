@@ -5,6 +5,7 @@ from boto3.dynamodb.conditions import Key, Attr
 import json
 import decimal
 import os
+import math
 import sys
 from datetime import datetime
 from datetime import date
@@ -165,8 +166,7 @@ def download_one_track(url_row):
 		print(e)
 
 
-def download_information_only():
-
+def download_information_only():	
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
@@ -194,15 +194,52 @@ def download_information_only():
 		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('classification').eq("set"))
 		sets_downloaded.extend(url_response['Items'])
 
-	#print ("all urls to download now:")
-	#for url_row in urls_to_dl:
-	#		print(url_row['artist'] + ': ' + url_row['title'])
 	print('Number of files to download:' + str(len(urls_to_dl)))
 	print('Number of tracks downloaded:' + str(len(tracks_downloaded)))
 	print('Number of sets downloaded:' + str(len(sets_downloaded)))
 
 
+
+
 	return
+
+def get_S3_size_data():
+
+	s3 = boto3.client('s3')
+	# S3 Get set size info
+	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
+	set_info = resp['Contents']
+
+	while 'NextContinuationToken' in resp:
+		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
+		set_info.extend(resp['Contents'])
+
+	total_set_size = 0
+	for set in set_info:
+		total_set_size += set['Size']
+	total_set_size_GB = total_set_size/(math.pow(2,30))
+
+	# S3 Get track size info
+	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='track')
+	track_info = resp['Contents']
+
+	while 'NextContinuationToken' in resp:
+		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='track')
+		track_info.extend(resp['Contents'])
+
+	total_track_size = 0
+	for track in track_info:
+		total_track_size += track['Size']
+	total_track_size_GB = total_track_size/(math.pow(2,30))
+
+	S3_data_array = [
+					str(len(track_info)),
+					str(round(total_track_size_GB,2)),
+					str(len(set_info)),
+					str(round(total_set_size_GB,2))
+					]
+
+	return S3_data_array
 
 def organise_staging_area():
 	# to remove this function - replaced with classifier
@@ -353,10 +390,6 @@ def classify_single_track(link_to_classify, extension):
 	return
 
 
-
-
-
-
 def upload_to_s3():
 	s3 = boto3.resource('s3')
 
@@ -501,7 +534,26 @@ def send_notification_email():
 
 
 
-	email_body += (email_sets + email_tracks)		
+	email_body += (email_sets + email_tracks)
+
+	S3_data = get_S3_size_data()
+
+	est_monthly_storage_cost = round(0.022 * (float(S3_data[1]) + float(S3_data[3])) , 2)
+	est_download_cost = round(0.09 * (float(S3_data[1]) + float(S3_data[3])) , 2)
+
+	email_body += '\n'
+	email_body += S3_data[0] + ' Tracks downloaded'+ '\n'
+	email_body += S3_data[1] + 'GB total size' + '\n'
+	email_body += '\n'
+
+	email_body += S3_data[2] + ' Sets downloaded' + '\n'
+	email_body += S3_data[3] + 'GB total size' + '\n'
+	email_body += '\n'
+
+	email_body += '$' + str(est_monthly_storage_cost) + ' Monthly storage cost' + '\n'
+	email_body += '$' + str(est_download_cost) + ' Full download cost' + '\n'
+
+
 	msg_client = boto3.client('sns',region_name='us-west-2')
 	topic = msg_client.create_topic(Name="crypto-news-daily")
 	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
