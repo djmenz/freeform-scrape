@@ -7,6 +7,7 @@ import decimal
 import os
 import math
 import sys
+import random
 from datetime import datetime
 from datetime import date
 from bs4 import BeautifulSoup
@@ -77,6 +78,9 @@ def download_upload_all_new_links():
 	
 	print('Number of files to download:' + str(len(urls_to_dl)))
 	
+	#In case of using multiple downloaders, randomise order
+	random.shuffle(urls_to_dl)
+
 	for url_row in urls_to_dl:
 		try:
 			download_one_track(url_row)
