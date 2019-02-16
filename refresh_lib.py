@@ -19,7 +19,7 @@ import youtube_dl
 from mutagen.mp3 import MP3
 
 def quick_refresh_link_database():
-	refresh_link_database(2019)
+	refresh_link_database(time.localtime()[0])
 	return
 
 def refresh_link_database(starting_year=2009):
@@ -44,20 +44,24 @@ def refresh_link_database(starting_year=2009):
 		else:
 			print ('invalid platform in database')
 
+	sc_total_count = 0
+	yt_total_count = 0
+
 	if(soundcloud_refresh_enabled):
 		print('---Soundcloud')	
 		for artist in soundcloud_artists:
 			print('Refreshing: ' + artist)
-			sc_refresh_link_database_for_artist(artist)
+			sc_total_count += sc_refresh_link_database_for_artist(artist)
 			print('Completed: ' + artist + '\n')
 
 	if(youtube_refresh_enabled):
 		print('---Youtube')
 		for artist in youtube_artists:
 			print('Refreshing: ' + artist)
-			yt_refresh_link_database_for_artist(artist, starting_year)
+			yt_total_count += yt_refresh_link_database_for_artist(artist, starting_year)
 			print('Completed: ' + artist + '\n')
 
+	print('Total links added: ' + str(sc_total_count + yt_total_count))
 	return
 
 def get_artists_to_download():
@@ -143,7 +147,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 			#print('already in database');
 			continue
 	print('links added: ' + str(counter))
-	return
+	return counter
 
 def yt_artist_to_channel_id(artist_to_dl):
 
@@ -245,7 +249,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 			#print('already in database')
 			continue	
 	print('links added: ' + str(counter))
-	return
+	return counter
 
 # This is for testing purposes - just refreshes the 1st soundcloud artist only
 def main():
