@@ -18,13 +18,15 @@ import urllib.request
 import youtube_dl
 from mutagen.mp3 import MP3
 
+base_fs_dir = '/home/daniel/Documents/freeform_scrape/'
+
 def quick_refresh_link_database():
 	refresh_link_database(time.localtime()[0])
 	return
 
 def refresh_link_database(starting_year=2009):
 	artist_list = get_artists_to_download()
-	soundcloud_refresh_enabled = True
+	soundcloud_refresh_enabled = False
 	youtube_refresh_enabled = True
 
 	youtube_artists = []
@@ -165,7 +167,8 @@ def yt_artist_to_channel_id(artist_to_dl):
 		pass
 
 	# Get youtube api key
-	youtube_api_file = open("youtube_api_key","r")
+	youtube_api_location = base_fs_dir + "youtube_api_key"
+	youtube_api_file = open(youtube_api_location,"r")
 	youtube_api_key = (youtube_api_file.readline()).rstrip('\n')
 	url = 'https://www.googleapis.com/youtube/v3/channels?key={}&forUsername={}&part=id'.format(youtube_api_key, artist_to_dl)
 	inp = urllib.request.urlopen(url)
@@ -178,7 +181,8 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	channel_id = yt_artist_to_channel_id(artist_to_dl)
 	
 	# Get youtube api key
-	youtube_api_file = open("youtube_api_key","r")
+	youtube_api_location = base_fs_dir + "youtube_api_key"
+	youtube_api_file = open(youtube_api_location,"r")
 	youtube_api_key = (youtube_api_file.readline()).rstrip('\n')
 
 	api_key = youtube_api_key
