@@ -581,15 +581,28 @@ def main():
 		download_information_only()
 		return
 
-	if (to_run == 'qrefresh'):
-		rl.quick_refresh_link_database()
-		return
-
 	if(to_run == 'all' or to_run == 'refresh'):
 		print('refreshing')
 		startTime_refresh = arrow.utcnow()
 		rl.refresh_link_database()
 		stopTime_refresh = arrow.utcnow()
+
+	if (to_run == 'refresh_sc'):
+		rl.quick_refresh_link_database(False,True)
+		return
+
+	if (to_run == 'refresh_yt'):
+		rl.refresh_link_database(2009,True,False)
+		return
+
+	if (to_run == 'qrefresh_yt'):
+		rl.quick_refresh_link_database(True,False)
+		return
+
+	if (to_run == 'qrefresh'):
+		rl.quick_refresh_link_database(True,True)
+		return
+
 	
 	if(to_run == 'all' or to_run == 'download'):
 		print('downloading')

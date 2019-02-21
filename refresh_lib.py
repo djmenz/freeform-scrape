@@ -20,14 +20,15 @@ from mutagen.mp3 import MP3
 
 base_fs_dir = '/home/daniel/Documents/freeform_scrape/'
 
-def quick_refresh_link_database():
-	refresh_link_database(time.localtime()[0])
+def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
+	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled)
 	return
 
-def refresh_link_database(starting_year=2009):
+def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
 	artist_list = get_artists_to_download()
-	soundcloud_refresh_enabled = False
-	youtube_refresh_enabled = True
+	
+	#soundcloud_refresh_enabled = True
+	#youtube_refresh_enabled = True
 
 	youtube_artists = []
 	soundcloud_artists = []
