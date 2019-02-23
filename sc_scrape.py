@@ -28,8 +28,7 @@ from mutagen.mp3 import MP3
 import init_artists
 import refresh_lib as rl
 
-base_fs_dir = '/home/daniel/Documents/freeform_scrape/'
-
+base_fs_dir = (os.path.dirname(os.path.realpath(__file__)) + '/')
 
 def download_all_new_links():
 

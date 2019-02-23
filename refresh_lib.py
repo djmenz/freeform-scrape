@@ -6,6 +6,7 @@ import json
 import decimal
 import os
 import sys
+import math
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver import Firefox
@@ -18,7 +19,7 @@ import urllib.request
 import youtube_dl
 from mutagen.mp3 import MP3
 
-base_fs_dir = '/home/daniel/Documents/freeform_scrape/'
+base_fs_dir = (os.path.dirname(os.path.realpath(__file__)) + '/')
 
 def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
 	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled)
@@ -27,9 +28,6 @@ def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_
 def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
 	artist_list = get_artists_to_download()
 	
-	#soundcloud_refresh_enabled = True
-	#youtube_refresh_enabled = True
-
 	youtube_artists = []
 	soundcloud_artists = []
 	
@@ -258,23 +256,20 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 
 # This is for testing purposes - just refreshes the 1st soundcloud artist only
 def main():
-	artist_list = get_artists_to_download()
+	s3 = boto3.client('s3')
+	# S3 Get set size info
+	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
+	set_info = resp['Contents']
 
-	soundcloud_artists = []
+	while 'NextContinuationToken' in resp:
+		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
+		set_info.extend(resp['Contents'])
+
+	total_set_size = 0
+	for set in set_info:
+		print(set['Key'])
+
+	exit()
 	
-	for artist_row in artist_list:
-		if (artist_row['platform'] == 'soundcloud'):
-			soundcloud_artists.append(artist_row['artist'])
-		else:
-			print ('invalid platform in database')
-
-	artist = soundcloud_artists[1]
-	print('---Soundcloud')	
-	print('Refreshing: ' + artist)
-	sc_refresh_link_database_for_artist(artist)
-	print('Completed: ' + artist + '\n')
-
-	
-
 if __name__ == "__main__":
 	main()
