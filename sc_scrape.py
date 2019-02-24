@@ -165,7 +165,7 @@ def download_one_track(url_row):
 
 		elif (platform == 'hearthisat'):
 			soundcloud_ydl_opts = {
-			'outtmpl': base_fs_dir + 'staging/['+ 'artist' +']%(title)s.%(ext)s',
+			'outtmpl': base_fs_dir + 'staging/['+ artist +']%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
 				info_dict = ydl.extract_info(url, download=False)
