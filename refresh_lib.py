@@ -30,6 +30,7 @@ def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundc
 	
 	youtube_artists = []
 	soundcloud_artists = []
+	hearthisat_artists = []
 	
 	for artist_row in artist_list:
 		if (artist_row['platform'] == 'soundcloud'):
@@ -37,16 +38,33 @@ def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundc
 				soundcloud_artists.append(artist_row['artist'])
 			except:
 				print('error with:' + str(artist_row['artist']))
+
+		elif (artist_row['platform'] == 'hearthisat'):
+			try:
+				hearthisat_artists.append(artist_row['artist'])
+			except:
+				print('error with:' + str(artist_row['artist']))
+
 		elif (artist_row['platform'] == 'youtube'):
 			try:
 				youtube_artists.append(artist_row['artist'])
 			except:
 				print('error with:' + str(artist_row['artist']))
 		else:
+			print(artist_row['platform'])
 			print ('invalid platform in database')
 
 	sc_total_count = 0
 	yt_total_count = 0
+	ht_total_count = 0
+
+	#ht grouped with sc for now as same refresh process
+	if(soundcloud_refresh_enabled):
+		print('---hearthisat')	
+		for artist in hearthisat_artists:
+			print('Refreshing: ' + artist)
+			ht_total_count += hta_refresh_link_database_for_artist(artist)
+			print('Completed: ' + artist + '\n')
 
 	if(soundcloud_refresh_enabled):
 		print('---Soundcloud')	

@@ -163,7 +163,7 @@ def download_one_track(url_row):
 						},
 					)
 
-		elif (platform == 'hearthisat'):
+		if (platform == 'hearthisat'):
 			soundcloud_ydl_opts = {
 			'outtmpl': base_fs_dir + 'staging/['+ artist +']%(title)s.%(ext)s',
 			}
