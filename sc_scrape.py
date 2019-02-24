@@ -137,9 +137,35 @@ def download_one_track(url_row):
 							'uploaded' : 'false',
 						},
 					)
-		elif (platform == 'soundcloud' or platform == 'hearthisat'):
+		if (platform == 'soundcloud'):
 			soundcloud_ydl_opts = {
 			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
+			}
+			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				ext = filename.rsplit('.')[-1:][0]
+				print('FILE IS:' + name_only)
+				ydl.download([url])
+				print("downloaded:" + url)
+
+				# Update the table if download was successful
+				table.put_item(
+						Item={
+							'url_link': url,
+							'platform': platform,
+							'artist': artist,
+							'downloaded': 'true',
+							'title' : title,
+							'filename' : name_only,
+							'uploaded' : 'false',
+						},
+					)
+
+		elif (platform == 'hearthisat'):
+			soundcloud_ydl_opts = {
+			'outtmpl': base_fs_dir + 'staging/['+ 'artist' +']%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
 				info_dict = ydl.extract_info(url, download=False)
