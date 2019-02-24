@@ -137,7 +137,7 @@ def download_one_track(url_row):
 							'uploaded' : 'false',
 						},
 					)
-		elif (platform == 'soundcloud'):
+		elif (platform == 'soundcloud' or platform == 'hearthisat'):
 			soundcloud_ydl_opts = {
 			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
 			}

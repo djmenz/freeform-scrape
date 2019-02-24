@@ -150,6 +150,80 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 	print('links added: ' + str(counter))
 	return counter
 
+def hta_refresh_link_database_for_artist(artist_to_dl):
+	non_mixes = ['reposts','likes','albums','sets','tracks','following','podcast']
+	options = Options()
+	options.add_argument('-headless')
+	driver = Firefox(executable_path='geckodriver', firefox_options=options)
+	url1 = 'https://hearthis.at/kuro-soundworks/' + artist_to_dl
+	driver.get(url1)
+
+	#autoscroll
+	pause = 5
+	last_height = driver.execute_script("return document.body.scrollHeight")
+
+	for zz in range(0,100):
+		print("scrolling")
+
+		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+		time.sleep(pause)
+		new_height = driver.execute_script("return document.body.scrollHeight")
+		if new_height == last_height:
+			break
+		last_height = new_height
+
+
+	html_doc = ""
+	html_doc = driver.page_source.encode('utf-8')
+	driver.close()
+
+	#print(html_doc)
+
+	soup = BeautifulSoup(html_doc, 'html.parser')
+	print(soup)
+
+	link_frags = set()
+
+	for link in soup.find_all('a'):
+		if str(link).find('/' + artist_to_dl + '/') > 0:
+			if not (str(link.get('href')).endswith('/download/') or str(link.get('href')).endswith('/podcast/')):
+		 		if (str(link.get('href')) != ('/' + artist_to_dl + '/')):
+		 			link_frags.add(link.get('href'))
+
+	links_full = []
+	for link in link_frags:
+		full_link = 'https://hearthis.at' + str(link)
+			#print(full_link)
+		links_full.append([full_link,link.split('/')[2]])
+
+	print('Number of links: ' + str(len(links_full)))
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	print('--- refreshing links in db')
+	counter = 0
+	for url in links_full:
+		try:
+			table.put_item(
+				Item={
+					'url_link': url[0],
+					'title' : url[1],
+					'platform': 'hearthisat',
+					'artist': artist_to_dl,
+					'downloaded': 'false',
+					'uploaded' : 'false',
+					'classification' : 'TBA',
+				},
+				ConditionExpression='attribute_not_exists(url_link)'
+			)
+			counter += 1
+		except Exception as e:
+			#print('already in database');
+			continue
+	print('links added: ' + str(counter))
+	return counter
+
 def yt_artist_to_channel_id(artist_to_dl):
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
@@ -254,20 +328,40 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	print('links added: ' + str(counter))
 	return counter
 
-# This is for testing purposes - just refreshes the 1st soundcloud artist only
+# This is for testing purposes - just refreshes the 1st hearthisat
 def main():
-	s3 = boto3.client('s3')
-	# S3 Get set size info
-	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
-	set_info = resp['Contents']
 
-	while 'NextContinuationToken' in resp:
-		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
-		set_info.extend(resp['Contents'])
+	artist_list = get_artists_to_download()
 
-	total_set_size = 0
-	for set in set_info:
-		print(set['Key'])
+	hearthisat_artists = []
+	
+	for artist_row in artist_list:
+		if (artist_row['platform'] == 'hearthisat'):
+			hearthisat_artists.append(artist_row['artist'])
+
+	artist = hearthisat_artists[0]
+	print('---hearthisat')	
+	print('Refreshing: ' + artist)
+	hta_refresh_link_database_for_artist(artist)
+	print('Completed: ' + artist + '\n')
+
+
+
+
+
+	###############test
+	# s3 = boto3.client('s3')
+	# # S3 Get set size info
+	# resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
+	# set_info = resp['Contents']
+
+	# while 'NextContinuationToken' in resp:
+	# 	resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
+	# 	set_info.extend(resp['Contents'])
+
+	# total_set_size = 0
+	# for set in set_info:
+	# 	print(set['Key'])
 
 	exit()
 	
