@@ -613,7 +613,11 @@ def main():
 		stopTime_refresh = arrow.utcnow()
 
 	if (to_run == 'refresh_sc'):
-		rl.quick_refresh_link_database(False,True)
+		rl.quick_refresh_link_database(False,True,False)
+		return
+
+	if (to_run == 'refresh_hta'):
+		rl.quick_refresh_link_database(False,False,True)
 		return
 
 	if (to_run == 'refresh_yt'):
@@ -621,11 +625,11 @@ def main():
 		return
 
 	if (to_run == 'qrefresh_yt'):
-		rl.quick_refresh_link_database(True,False)
+		rl.quick_refresh_link_database(True,False,False)
 		return
 
 	if (to_run == 'qrefresh'):
-		rl.quick_refresh_link_database(True,True)
+		rl.quick_refresh_link_database(True,True,False)
 		return
 
 	

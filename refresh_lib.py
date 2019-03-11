@@ -21,11 +21,11 @@ from mutagen.mp3 import MP3
 
 base_fs_dir = (os.path.dirname(os.path.realpath(__file__)) + '/')
 
-def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
-	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled)
+def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_enabled=True,hearthisat_refresh_enabled=False):
+	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled,hearthisat_refresh_enabled)
 	return
 
-def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
+def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True,hearthisat_refresh_enabled=False):
 	artist_list = get_artists_to_download()
 	
 	youtube_artists = []
@@ -59,7 +59,7 @@ def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundc
 	ht_total_count = 0
 
 	#ht grouped with sc for now as same refresh process
-	if(soundcloud_refresh_enabled):
+	if(hearthisat_refresh_enabled):
 		print('---hearthisat')	
 		for artist in hearthisat_artists:
 			print('Refreshing: ' + artist)
@@ -131,6 +131,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 				#print(link.get('href'))
 				if (str(link.get('href')).split('/')[2]) not in non_mixes:
 					link_frags.add(link.get('href'))
+					#print(link.get('href'))
 
 
 	links_full = []
@@ -198,7 +199,7 @@ def hta_refresh_link_database_for_artist(artist_to_dl):
 	#print(html_doc)
 
 	soup = BeautifulSoup(html_doc, 'html.parser')
-	print(soup)
+	#print(soup)
 
 	link_frags = set()
 
