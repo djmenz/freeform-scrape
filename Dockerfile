@@ -16,6 +16,7 @@ RUN curl https://dl-ssl.google.com/linux/linux_signing_key.pub -o /tmp/google.pu
     && echo 'deb http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google.list \
     && mkdir -p /usr/share/desktop-directories \
     && apt-get -y update && apt-get install -y google-chrome-stable
+
 # Disable the SUID sandbox so that chrome can launch without being in a privileged container
 RUN dpkg-divert --add --rename --divert /opt/google/chrome/google-chrome.real /opt/google/chrome/google-chrome \
     && echo "#!/bin/bash\nexec /opt/google/chrome/google-chrome.real --no-sandbox --disable-setuid-sandbox \"\$@\"" > /opt/google/chrome/google-chrome \
@@ -28,9 +29,12 @@ RUN mkdir -p /opt/selenium \
  
 # Firefox browser to run the tests
 RUN apt-get install -y firefox
+
+#Update package lists
+RUN apt-get update
  
 # Gecko Driver
-ENV GECKODRIVER_VERSION 0.16.0
+ENV GECKODRIVER_VERSION 0.24.0
 RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v$GECKODRIVER_VERSION/geckodriver-v$GECKODRIVER_VERSION-linux64.tar.gz \
   && rm -rf /opt/geckodriver \
   && tar -C /opt -zxf /tmp/geckodriver.tar.gz \
@@ -39,7 +43,10 @@ RUN wget --no-verbose -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geck
   && chmod 755 /opt/geckodriver-$GECKODRIVER_VERSION \
   && ln -fs /opt/geckodriver-$GECKODRIVER_VERSION /usr/bin/geckodriver \
   && ln -fs /opt/geckodriver-$GECKODRIVER_VERSION /usr/bin/wires
- 
+
+# Install ffmpeg
+RUN apt-get install -y ffmpeg
+
 # python
 RUN apt-get install -y libxml2-dev libxslt1-dev
 RUN apt-get update && apt-get install -y \
@@ -57,4 +64,5 @@ RUN pip3 install -r requirements.txt
 COPY . .
 
 ENTRYPOINT ["python3"]
-#CMD ["/app/sc_scrape.py refresh"]
+
+CMD ["/app/sc_scrape.py","refresh_sc"]
