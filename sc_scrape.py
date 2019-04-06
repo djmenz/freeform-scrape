@@ -270,6 +270,46 @@ def get_S3_size_data():
 
 	return S3_data_array
 
+
+def show_song_info():
+
+	s3 = boto3.client('s3')
+	# S3 Get set size info
+	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
+	set_info = resp['Contents']
+
+	while 'NextContinuationToken' in resp:
+		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
+		set_info.extend(resp['Contents'])
+
+	total_set_size = 0
+	for set in set_info:
+		total_set_size += set['Size']
+		print(set['Key'])
+	total_set_size_GB = total_set_size/(math.pow(2,30))
+
+	# S3 Get track size info
+	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='track')
+	track_info = resp['Contents']
+
+	while 'NextContinuationToken' in resp:
+		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='track')
+		track_info.extend(resp['Contents'])
+
+	total_track_size = 0
+	for track in track_info:
+		total_track_size += track['Size']
+	total_track_size_GB = total_track_size/(math.pow(2,30))
+
+	S3_data_array = [
+					str(len(track_info)),
+					str(round(total_track_size_GB,2)),
+					str(len(set_info)),
+					str(round(total_set_size_GB,2))
+					]
+
+	return
+
 def organise_staging_area():
 	# to remove this function - replaced with classifier
 	#check length of every file in staging area
@@ -524,9 +564,13 @@ def send_notification_email():
 	# for the summary email
 	today = date.today()
 	today_ord = today.toordinal()
+
+
 	email_body = "Files uploaded\n"
 	email_sets = ""
 	email_tracks = ""
+
+	s3_url_generic = 'https://s3.console.aws.amazon.com/s3/buckets/freeform-scrape/?region=ap-southeast-2&tab=overview&prefixSearch='
 
 	# Get all the non notified ones
 
@@ -545,7 +589,13 @@ def send_notification_email():
 		print(row)
 
 		if (row['classification'] == 'set'):
-			email_sets += row['classification'] + ' : ' + row['filename'] + '\n'
+
+			#urls for possible future use
+			temp_link = s3_url_generic + 'set/' + row['filename']
+			temp_row_name = row['classification'] + ' : ' + row['filename']
+			html_link = '<a href=' + temp_link+ '>' + temp_row_name + '</a>'
+
+			email_sets += temp_row_name + '\n'
 		else:
 			email_tracks += row['classification'] + ' : ' + row['filename'] + '\n'
 
@@ -632,7 +682,10 @@ def main():
 		rl.quick_refresh_link_database(True,True,False)
 		return
 
-	
+	if (to_run == 'song_info'):
+		show_song_info()
+		return
+
 	if(to_run == 'all' or to_run == 'download'):
 		print('downloading')
 		startTime_download = arrow.utcnow()

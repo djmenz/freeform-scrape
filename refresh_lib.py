@@ -80,7 +80,7 @@ def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundc
 			yt_total_count += yt_refresh_link_database_for_artist(artist, starting_year)
 			print('Completed: ' + artist + '\n')
 
-	print('Total links added: ' + str(sc_total_count + yt_total_count))
+	print('Total links added: ' + str(sc_total_count + yt_total_count + ht_total_count))
 	return
 
 def get_artists_to_download():
