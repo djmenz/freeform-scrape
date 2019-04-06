@@ -613,7 +613,7 @@ def send_notification_email():
 
 
 
-	email_body += (email_sets + email_tracks)
+	email_body += (email_sets + '\n' + email_tracks)
 
 	S3_data = get_S3_size_data()
 
