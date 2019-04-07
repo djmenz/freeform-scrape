@@ -287,9 +287,6 @@ def get_S3_size_data():
 		urls_to_dlt.extend(url_response2['Items'])
 	track_desc = len(urls_to_dlt)
 
-	print(set_desc)
-	print(track_desc)
-
 	S3_data_array = [
 					str(len(track_info) - track_desc),
 					str(round(total_track_size_GB,2)),
@@ -725,8 +722,56 @@ def s3upload_single_track(old_url_row):
 	except Exception as e:
 		print(e)
 
+def create_full_html_file():
 
-def send_notification_email():
+	test_file = open("all_links.html","w") 
+
+	s3_url_generic = 'https://s3.console.aws.amazon.com/s3/buckets/freeform-scrape/?region=ap-southeast-2&tab=overview&prefixSearch='
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	#get all sets
+	response = table.scan(FilterExpression=Attr('uploaded').eq('true')&Attr('classification').eq('set'))
+	to_notify_rows = response['Items']
+	while 'LastEvaluatedKey' in response:
+		response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'],FilterExpression=Attr('uploaded').eq('true')&Attr('classification').eq('set'))
+		to_notify_rows.extend(response['Items'])
+
+	sets_sorted_by_artist = sorted(to_notify_rows, key=lambda k: k['artist']) 
+
+	print('sorted list, generating html file')
+	for row in sets_sorted_by_artist:
+
+		temp_link = s3_url_generic + 'set/' + row['filename']
+		temp_row_name = row['classification'] + ' : ' + row['filename']
+		html_link = "<a href='" + temp_link+ "''>" + temp_row_name + '</a><br>'
+		test_file.write(html_link + '\n')
+
+	#get all tracks
+	test_file.write('<br>' + '\n')
+	response = table.scan(FilterExpression=Attr('uploaded').eq('true')&Attr('classification').eq('track'))
+	to_notify_rows = response['Items']
+	while 'LastEvaluatedKey' in response:
+		response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'],FilterExpression=Attr('uploaded').eq('true')&Attr('classification').eq('track'))
+		to_notify_rows.extend(response['Items'])
+
+	tracks_sorted_by_artist = sorted(to_notify_rows, key=lambda k: k['artist']) 
+
+	print('adding tracks...')
+	for row in tracks_sorted_by_artist:
+
+		temp_link = s3_url_generic + 'track/' + row['filename']
+		temp_row_name = row['classification'] + ' : ' + row['filename']
+		html_link = "<a href='" + temp_link+ "''>" + temp_row_name + '</a><br>'
+		test_file.write(html_link + '\n')
+
+	test_file.close()
+
+
+
+
+
+def send_notification_email(get_notified_full_list = False):
 
 	# for the summary email
 	today = date.today()
@@ -739,21 +784,23 @@ def send_notification_email():
 
 	s3_url_generic = 'https://s3.console.aws.amazon.com/s3/buckets/freeform-scrape/?region=ap-southeast-2&tab=overview&prefixSearch='
 
+	notified = 'false'
 	# Get all the non notified ones
+	if(get_notified_full_list):
+		notified = 'true'
 
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
 	#refresh file name from dynamodb table
-	response = table.scan(FilterExpression=Attr('notified').eq('false'))
+	response = table.scan(FilterExpression=Attr('notified').eq(notified))
 	to_notify_rows = response['Items']
 
 	while 'LastEvaluatedKey' in response:
-		response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'],FilterExpression=Attr('notified').eq('false'))
+		response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'],FilterExpression=Attr('notified').eq(notified))
 		to_notify_rows.extend(response['Items'])
 
 	for row in to_notify_rows:
-		print(row)
 
 		if (row['classification'] == 'set'):
 
@@ -853,6 +900,10 @@ def main():
 		song_info_download()
 		return
 
+	if (to_run == 'create_links'):
+		create_full_html_file()
+		return
+
 	if(to_run == 'all' or to_run == 'download'):
 		print('downloading')
 		startTime_download = arrow.utcnow()
@@ -874,6 +925,11 @@ def main():
 	if(to_run == 'notify'):
 		startTime_upload = arrow.utcnow()
 		send_notification_email()
+		stopTime_upload = arrow.utcnow()
+
+	if(to_run == 'notify_all'):
+		startTime_upload = arrow.utcnow()
+		send_notification_email(True)
 		stopTime_upload = arrow.utcnow()
 
 	#organise_staging_area()	
