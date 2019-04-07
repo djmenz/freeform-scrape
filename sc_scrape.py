@@ -95,6 +95,13 @@ def download_one_track(url_row):
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
+	#check if already downloaded by inprogress process
+	check_resp = table.get_item(Key ={'url_link' : url_row['url_link']})
+	check_item = check_resp['Item']
+	if check_item['downloaded'] == 'true':
+		print('Already downloaded in the meantime,')
+		return
+
 	try:
 		url = url_row['url_link']
 		platform = url_row['platform']
@@ -108,7 +115,7 @@ def download_one_track(url_row):
 			youtube_ydl_opts  = {
 				'format': 'bestaudio/best',
 				'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
-				'writeinfojson': True,
+				'writedescription': True,
 				'postprocessors': [{
 					'key': 'FFmpegExtractAudio',
 					'preferredcodec': 'mp3',
@@ -139,6 +146,7 @@ def download_one_track(url_row):
 					)
 		if (platform == 'soundcloud'):
 			soundcloud_ydl_opts = {
+			'writedescription': True,
 			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
@@ -165,6 +173,7 @@ def download_one_track(url_row):
 
 		if (platform == 'hearthisat'):
 			soundcloud_ydl_opts = {
+			'writedescription': True,
 			'outtmpl': base_fs_dir + 'staging/['+ artist +']%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
@@ -227,9 +236,6 @@ def download_information_only():
 	print('Number of tracks downloaded:' + str(len(tracks_downloaded)))
 	print('Number of sets downloaded:' + str(len(sets_downloaded)))
 
-
-
-
 	return
 
 def get_S3_size_data():
@@ -261,54 +267,194 @@ def get_S3_size_data():
 		total_track_size += track['Size']
 	total_track_size_GB = total_track_size/(math.pow(2,30))
 
+	# Get number of description files, should count exact number
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	set_desc = 0
+	url_response = table.scan(FilterExpression=Attr('description').eq("true")&Attr('classification').eq("set"))
+	urls_to_dl = url_response['Items']	
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('description').eq("true")&Attr('classification').eq("set"))
+		urls_to_dl.extend(url_response['Items'])
+	set_desc = len(urls_to_dl)
+
+	track_desc = 0
+	url_response2 = table.scan(FilterExpression=Attr('description').eq("true")&Attr('classification').eq("track"))
+	urls_to_dlt = url_response2['Items']	
+	while 'LastEvaluatedKey' in url_response2:
+		url_response2 = table.scan(ExclusiveStartKey=url_response2['LastEvaluatedKey'],FilterExpression=Attr('description').eq("true")&Attr('classification').eq("track"))
+		urls_to_dlt.extend(url_response2['Items'])
+	track_desc = len(urls_to_dlt)
+
+	print(set_desc)
+	print(track_desc)
+
 	S3_data_array = [
-					str(len(track_info)),
+					str(len(track_info) - track_desc),
 					str(round(total_track_size_GB,2)),
-					str(len(set_info)),
+					str(len(set_info) - set_desc),
 					str(round(total_set_size_GB,2))
 					]
 
 	return S3_data_array
 
 
-def show_song_info():
+def song_info_download():
 
-	s3 = boto3.client('s3')
-	# S3 Get set size info
-	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
-	set_info = resp['Contents']
+	print('bulk download of information')
 
-	while 'NextContinuationToken' in resp:
-		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
-		set_info.extend(resp['Contents'])
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
 
-	total_set_size = 0
-	for set in set_info:
-		total_set_size += set['Size']
-		print(set['Key'])
-	total_set_size_GB = total_set_size/(math.pow(2,30))
+	url_response = table.scan(FilterExpression=Attr('description').ne("true")&Attr('uploaded').eq("true")&Attr('platform').ne("hearthisat"))	
+	urls_to_dl = url_response['Items']
 
-	# S3 Get track size info
-	resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='track')
-	track_info = resp['Contents']
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('description').ne("true")&Attr('uploaded').eq("true")&Attr('platform').ne("hearthisat"))
+		urls_to_dl.extend(url_response['Items'])
 
-	while 'NextContinuationToken' in resp:
-		resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='track')
-		track_info.extend(resp['Contents'])
-
-	total_track_size = 0
-	for track in track_info:
-		total_track_size += track['Size']
-	total_track_size_GB = total_track_size/(math.pow(2,30))
-
-	S3_data_array = [
-					str(len(track_info)),
-					str(round(total_track_size_GB,2)),
-					str(len(set_info)),
-					str(round(total_set_size_GB,2))
-					]
+	print ("all urls to download now")
+	for url_row in urls_to_dl:
+		print(url_row['url_link'])
+		song_info_download_upload_one_song(url_row)
+	
+	print('Number of files to get info:' + str(len(urls_to_dl)))
 
 	return
+
+
+def song_info_download_upload_one_song(url_row):
+	base_dir = base_fs_dir + 'staging/'
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	try:
+		url = url_row['url_link']
+		platform = url_row['platform']
+		artist = url_row['artist']
+		title = url_row['title']
+		print("\nattempting download of:" + url)
+		ext = ""
+
+		# Perform the download 
+		if (platform == 'youtube'):
+			youtube_ydl_opts  = {
+				'format': 'bestaudio/best',
+				'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
+				'writedescription': True,
+				'skip_download': True,
+				'postprocessors': [{
+					'key': 'FFmpegExtractAudio',
+					'preferredcodec': 'mp3',
+					'preferredquality': '192',
+				}],
+			}
+			with youtube_dl.YoutubeDL(youtube_ydl_opts) as ydl:
+				
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				ext = filename.rsplit('.')[-1:][0]
+				print('FILE IS:' + name_only)
+				result = ydl.download([url])
+				print("downloaded:" + url)
+
+
+		if (platform == 'soundcloud'):
+			soundcloud_ydl_opts = {
+			'writedescription': True,
+			'skip_download': True,
+			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
+			}
+			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				ext = filename.rsplit('.')[-1:][0]
+				print('FILE IS:' + name_only)
+				ydl.download([url])
+				print("downloaded:" + url)
+
+
+		if (platform == 'hearthisat'):
+			soundcloud_ydl_opts = {
+			'writedescription': True,
+			'skip_download': True,
+			'outtmpl': base_fs_dir + 'staging/['+ artist +']%(title)s.%(ext)s',
+			}
+			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
+				info_dict = ydl.extract_info(url, download=False)
+				filename = ydl.prepare_filename(info_dict)
+				name_only = filename[len(base_dir):].rsplit('.',1)[0]
+				ext = filename.rsplit('.')[-1:][0]
+				print('FILE IS:' + name_only)
+				ydl.download([url])
+				print("downloaded:" + url)
+
+	except Exception as e:
+		print(e)
+
+	s3 = boto3.resource('s3')
+	old_url_row = url_row
+
+	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
+	table = dynamodb.Table('music_url_archive')
+
+	#refresh file name from dynamodb table
+	url_response = table.scan(FilterExpression=Attr('url_link').eq(old_url_row['url_link']))
+	artists_response = url_response['Items']
+
+	while 'LastEvaluatedKey' in url_response:
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('url_link').eq(old_url_row['url_link']))
+		artists_response.extend(url_response['Items'])
+
+	artist_info = artists_response[0]
+	url_row = artist_info
+
+	try:
+		url = url_row['url_link']
+		filename = url_row['filename']
+		classification = url_row['classification']
+		print('Uploading Description:' + str(url))
+		print(filename)
+
+		# Upload a new file
+		base_dir = base_fs_dir
+		staging_file_description_location = (base_dir + 'staging/' + filename + '.description')
+
+	except Exception as e:
+		print(filename)
+		print(e)
+
+	try:
+		data = open(staging_file_description_location, 'rb')
+		print('uploading: ' + staging_file_description_location)
+		s3.Bucket('freeform-scrape').put_object(Key=classification+ '/' + filename + '.description', Body=data)
+
+		response = table.update_item(
+		Key={
+			'url_link': url,
+		},
+		UpdateExpression="set description = :r",
+		ExpressionAttributeValues={
+			':r': 'true',
+		},
+		ReturnValues="UPDATED_NEW"
+		)
+	except:
+		print('description file not found - check staging area')
+
+	# Remove from local storage (change so only occurs on succesful upload)
+	if os.path.isfile(staging_file_description_location):
+		os.remove(staging_file_description_location)
+		print('file uploaded and removed from local system\n')
+
+	else:    ## Show an error ##
+		print("Error: %s file not found" % staging_file_description_location)
+
+	return
+
 
 def organise_staging_area():
 	# to remove this function - replaced with classifier
@@ -509,6 +655,7 @@ def s3upload_single_track(old_url_row):
 
 		file_ex = '.mp3' # need to fix this properly
 		staging_file_location = (base_dir + 'staging/' + filename + file_ex)
+		staging_file_description_location = (base_dir + 'staging/' + filename + '.description')
 
 		if(os.path.isfile(staging_file_location) == False):
 			file_ex = '.wav'
@@ -548,9 +695,29 @@ def s3upload_single_track(old_url_row):
 		ReturnValues="UPDATED_NEW"
 		)
 
+
+		# Also try upload the description file
+		try:
+			data = open(staging_file_description_location, 'rb')
+			s3.Bucket('freeform-scrape').put_object(Key=classification+ '/' + filename + '.description', Body=data)
+
+			response = table.update_item(
+			Key={
+				'url_link': url,
+			},
+			UpdateExpression="set description = :r",
+			ExpressionAttributeValues={
+				':r': 'true',
+			},
+			ReturnValues="UPDATED_NEW"
+			)
+		except:
+			print('description file no found')
+
 		# Remove from local storage (change so only occurs on succesful upload)
 		if os.path.isfile(staging_file_location):
 			os.remove(staging_file_location)
+			os.remove(staging_file_description_location)
 			print('file uploaded and removed from local system\n')
 
 		else:    ## Show an error ##
@@ -682,8 +849,8 @@ def main():
 		rl.quick_refresh_link_database(True,True,False)
 		return
 
-	if (to_run == 'song_info'):
-		show_song_info()
+	if (to_run == 'song_info_download'):
+		song_info_download()
 		return
 
 	if(to_run == 'all' or to_run == 'download'):
