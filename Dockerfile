@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     xvfb 
  
+RUN apt update -y
+
 # Chrome browser to run the tests
 RUN curl https://dl-ssl.google.com/linux/linux_signing_key.pub -o /tmp/google.pub \
     && cat /tmp/google.pub | apt-key add -; rm /tmp/google.pub \
