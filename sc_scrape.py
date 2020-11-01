@@ -171,33 +171,6 @@ def download_one_track(url_row):
 						},
 					)
 
-		if (platform == 'hearthisat'):
-			soundcloud_ydl_opts = {
-			'writedescription': True,
-			'outtmpl': base_fs_dir + 'staging/['+ artist +']%(title)s.%(ext)s',
-			}
-			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
-				info_dict = ydl.extract_info(url, download=False)
-				filename = ydl.prepare_filename(info_dict)
-				name_only = filename[len(base_dir):].rsplit('.',1)[0]
-				ext = filename.rsplit('.')[-1:][0]
-				print('FILE IS:' + name_only)
-				ydl.download([url])
-				print("downloaded:" + url)
-
-				# Update the table if download was successful
-				table.put_item(
-						Item={
-							'url_link': url,
-							'platform': platform,
-							'artist': artist,
-							'downloaded': 'true',
-							'title' : title,
-							'filename' : name_only,
-							'uploaded' : 'false',
-						},
-					)
-
 		classify_single_track(url,ext);
 
 	except Exception as e:
@@ -300,7 +273,6 @@ def get_S3_size_data():
 def song_info_download():
 
 	print('bulk download of information')
-
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
@@ -878,10 +850,6 @@ def main():
 
 	if (to_run == 'refresh_sc'):
 		rl.quick_refresh_link_database(False,True,False)
-		return
-
-	if (to_run == 'refresh_hta'):
-		rl.quick_refresh_link_database(False,False,True)
 		return
 
 	if (to_run == 'refresh_yt'):
