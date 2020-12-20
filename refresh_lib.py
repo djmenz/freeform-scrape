@@ -59,11 +59,11 @@ def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundc
 	ht_total_count = 0
 
 	#ht grouped with sc for now as same refresh process
-	if(hearthisat_refresh_enabled):
-		print('---hearthisat')	
-		for artist in hearthisat_artists:
+	if(youtube_refresh_enabled):
+		print('---Youtube')
+		for artist in youtube_artists:
 			print('Refreshing: ' + artist)
-			ht_total_count += hta_refresh_link_database_for_artist(artist)
+			yt_total_count += yt_refresh_link_database_for_artist(artist, starting_year)
 			print('Completed: ' + artist + '\n')
 
 	if(soundcloud_refresh_enabled):
@@ -73,12 +73,6 @@ def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundc
 			sc_total_count += sc_refresh_link_database_for_artist(artist)
 			print('Completed: ' + artist + '\n')
 
-	if(youtube_refresh_enabled):
-		print('---Youtube')
-		for artist in youtube_artists:
-			print('Refreshing: ' + artist)
-			yt_total_count += yt_refresh_link_database_for_artist(artist, starting_year)
-			print('Completed: ' + artist + '\n')
 
 	print('Total links added: ' + str(sc_total_count + yt_total_count + ht_total_count))
 	return
