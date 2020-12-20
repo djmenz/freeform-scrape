@@ -283,7 +283,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	base_search_url = 'https://www.googleapis.com/youtube/v3/search?'
 
 
-	# Searches all years between 2009 - 2021
+	# Searches all years between 2021 2021
 	years_RFC3339_pairs = []
 	for x in range(starting_year,2021):
 		start_year = (str(x)+'-01-01T00:00:00Z')
@@ -347,25 +347,20 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	print('links added: ' + str(counter))
 	return counter
 
-# This is for testing purposes - just refreshes the 1st hearthisat
+# This is for testing purposes - refresh all youtube from 2015
 def main():
 
-	artist_list = get_artists_to_download()
-
-	hearthisat_artists = []
+	# artist_to_dl = []
+	# artist_list = get_artists_to_download()
+	# for artist in artist_list:
+	# 	if artist['platform'] == 'youtube':
+	# 		artist_to_dl.append(artist['artist'])
 	
-	for artist_row in artist_list:
-		if (artist_row['platform'] == 'hearthisat'):
-			hearthisat_artists.append(artist_row['artist'])
+	# print(artist_to_dl)
 
-	artist = hearthisat_artists[0]
-	print('---hearthisat')	
-	print('Refreshing: ' + artist)
-	hta_refresh_link_database_for_artist(artist)
+	# for artist in artist_to_dl:
+	yt_refresh_link_database_for_artist('KuroDeejay',2015)
 	print('Completed: ' + artist + '\n')
-
-
-
 
 
 	###############test

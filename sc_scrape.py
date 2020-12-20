@@ -853,7 +853,7 @@ def main():
 		return
 
 	if (to_run == 'refresh_yt'):
-		rl.refresh_link_database(2009,True,False)
+		rl.refresh_link_database(2020,True,False)
 		return
 
 	if (to_run == 'qrefresh_yt'):
