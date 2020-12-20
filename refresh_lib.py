@@ -25,7 +25,7 @@ def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_
 	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled,hearthisat_refresh_enabled)
 	return
 
-def refresh_link_database(starting_year=2009,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True,hearthisat_refresh_enabled=False):
+def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True,hearthisat_refresh_enabled=False):
 	artist_list = get_artists_to_download()
 	
 	youtube_artists = []
@@ -283,7 +283,7 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	base_search_url = 'https://www.googleapis.com/youtube/v3/search?'
 
 
-	# Searches all years between 2021 2021
+	# Searches all years between 2019 2021
 	years_RFC3339_pairs = []
 	for x in range(starting_year,2021):
 		start_year = (str(x)+'-01-01T00:00:00Z')
