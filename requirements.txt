@@ -23,5 +23,4 @@ pytest-gitignore
 pytz
 six
 times
-librosa
 fire
