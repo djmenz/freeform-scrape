@@ -18,6 +18,7 @@ from selenium.webdriver.firefox.options import Options
 import time
 import arrow
 import urllib.request
+import fire
 
 import subprocess
 import re
@@ -64,11 +65,11 @@ def download_upload_all_new_links():
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
-	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false"))	
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false")&Attr('platform').eq("youtube"))	
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false"))
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false")&Attr('platform').eq("youtube"))
 		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
@@ -915,5 +916,6 @@ def main():
 	return
 
 if __name__ == "__main__":
+	#fire.Fire()
 	main()
 
