@@ -97,11 +97,11 @@ def download_upload_all_new_links(platform_to_dl = 'youtube'):
 			print(e)
 			unsuccessful_downloads.append(url_row)
 
-	email_body = "successful downloads"
-	email_body += str(successful_downloads)
-	email_body += "####################################"
-	email_body += "unsuccessful downloads"
-	email_body += str(unsuccessful_downloads)
+	email_body = "successful downloads\n"
+	email_body += str([str(f"{x['url_link']} {x['title']}") for x in successful_downloads])
+	email_body += "\n####################################\n"
+	email_body += "unsuccessful downloads\n"
+	email_body += str([str(f"{x['url_link']} {x['title']}") for x in unsuccessful_downloads])
 	msg_client = boto3.client('sns',region_name='us-west-2')
 	topic = msg_client.create_topic(Name="crypto-news-daily")
 	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
@@ -906,6 +906,7 @@ def main():
 		send_notification_email()
 		stopTime_upload = arrow.utcnow()
 
+	# This defaults to only youtube
 	if(to_run == 'newall'):
 		startTime_upload = arrow.utcnow()
 		download_upload_all_new_links()
