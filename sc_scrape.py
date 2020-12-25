@@ -59,22 +59,24 @@ def download_all_new_links():
 
 	return
 
-def download_upload_all_new_links():
+def download_upload_all_new_links(platform_to_dl = 'youtube'):
 
 	base_dir = base_fs_dir + 'staging/'
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
-	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false")&Attr('platform').eq("youtube"))	
+
+    #temporarily only downloading the youtube sets since soundcloud links seem to be not working 
+	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false")&Attr('platform').eq(platform_to_dl))	
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false")&Attr('platform').eq("youtube"))
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false")&Attr('uploaded').eq("false")&Attr('platform').eq(platform_to_dl))
 		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
 	for url_row in urls_to_dl:
-		print(url_row)
+		#print(url_row)
 		print(url_row['url_link'])
 	
 	print('Number of files to download:' + str(len(urls_to_dl)))
@@ -908,6 +910,16 @@ def main():
 		startTime_upload = arrow.utcnow()
 		download_upload_all_new_links()
 		stopTime_upload = arrow.utcnow()
+
+	if(to_run == 'newall_yt'):
+		startTime_upload = arrow.utcnow()
+		download_upload_all_new_links(platform_to_dl='youtube')
+		stopTime_upload = arrow.utcnow()
+
+	if(to_run == 'newall_sc'):
+		startTime_upload = arrow.utcnow()
+		download_upload_all_new_links(platform_to_dl='soundcloud')
+		stopTime_upload = arrow.utcnow()	
 
 	if(to_run == 'notify'):
 		startTime_upload = arrow.utcnow()

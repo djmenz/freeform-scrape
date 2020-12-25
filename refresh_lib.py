@@ -86,7 +86,7 @@ def get_artists_to_download():
 	return artists
 
 def sc_refresh_link_database_for_artist(artist_to_dl):
-	non_mixes = ['reposts','likes','albums','sets','tracks','following','followers']
+	non_mixes = ['reposts','likes','albums','sets','tracks','following','followers','toptracks','popular-tracks']
 	options = Options()
 	options.add_argument('-headless')
 	driver = Firefox(executable_path='geckodriver', firefox_options=options)
@@ -124,8 +124,8 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 			if not (str(link.get('href')).endswith('/comments')):
 				#print(link.get('href'))
 				if (str(link.get('href')).split('/')[2]) not in non_mixes:
-					link_frags.add(link.get('href'))
-					#print(link.get('href'))
+					if 'tracks?_' not in link.get('href'):
+						link_frags.add(link.get('href'))
 
 
 	links_full = []
@@ -136,6 +136,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 			links_full.append([full_link,link.split('/')[2]])
 
 	print('Number of links: ' + str(len(links_full)))
+	#print(links_full)
 	
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
@@ -143,6 +144,7 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 	print('--- refreshing links in db')
 	counter = 0
 	for url in links_full:
+		print(url[0])
 		try:
 			table.put_item(
 				Item={
