@@ -74,6 +74,7 @@ def download_upload_all_new_links():
 
 	print ("all urls to download now")
 	for url_row in urls_to_dl:
+		print(url_row)
 		print(url_row['url_link'])
 	
 	print('Number of files to download:' + str(len(urls_to_dl)))
@@ -81,12 +82,29 @@ def download_upload_all_new_links():
 	#In case of using multiple downloaders, randomise order
 	random.shuffle(urls_to_dl)
 
+	successful_downloads = []
+	unsuccessful_downloads = []
+
 	for url_row in urls_to_dl:
 		try:
 			download_one_track(url_row)
 			s3upload_single_track(url_row)
+			successful_downloads.append(url_row)
+
 		except Exception as e:
 			print(e)
+			unsuccessful_downloads.append(url_row)
+
+	email_body = "successful downloads"
+	email_body += str(successful_downloads)
+	email_body += "####################################"
+	email_body += "unsuccessful downloads"
+	email_body += str(unsuccessful_downloads)
+	msg_client = boto3.client('sns',region_name='us-west-2')
+	topic = msg_client.create_topic(Name="crypto-news-daily")
+	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
+	mail_subject = 'Freeform-scrape-failure-report'
+	msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject="unsuccessful downloads")
 
 	return
 
