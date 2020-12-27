@@ -50,23 +50,32 @@ def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundc
 	sc_total_count = 0
 	yt_total_count = 0
 
-	#ht grouped with sc for now as same refresh process
-	if(youtube_refresh_enabled):
-		print('---Youtube')
-		for artist in youtube_artists:
-			print('Refreshing: ' + artist)
-			yt_total_count += yt_refresh_link_database_for_artist(artist, starting_year)
-			print('Completed: ' + artist + '\n')
+	try:
+		if(youtube_refresh_enabled):
+			print('---Youtube')
+			for artist in youtube_artists:
+				print('Refreshing: ' + artist)
+				yt_total_count += yt_refresh_link_database_for_artist(artist, starting_year)
+				print('Completed: ' + artist + '\n')
 
-	if(soundcloud_refresh_enabled):
-		print('---Soundcloud')	
-		for artist in soundcloud_artists:
-			print('Refreshing: ' + artist)
-			sc_total_count += sc_refresh_link_database_for_artist(artist)
-			print('Completed: ' + artist + '\n')
+		if(soundcloud_refresh_enabled):
+			print('---Soundcloud')	
+			for artist in soundcloud_artists:
+				print('Refreshing: ' + artist)
+				sc_total_count += sc_refresh_link_database_for_artist(artist)
+				print('Completed: ' + artist + '\n')
+	except Exception as exception:
+		print("refresh error:")
+		print(exception)
+		email_body = str(exception)
+		msg_client = boto3.client('sns',region_name='us-west-2')
+		topic = msg_client.create_topic(Name="crypto-news-daily")
+		topic_arn = topic['TopicArn']  # get its Amazon Resource Name
+		mail_subject = 'Freeform-scrape-failure-report'
+		msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject="freeform scrape - refresh error")
 
 
-	print('Total links added: ' + str(sc_total_count + yt_total_count + ht_total_count))
+	print('Total links added: ' + str(sc_total_count + yt_total_count))
 	return
 
 def get_artists_to_download():
