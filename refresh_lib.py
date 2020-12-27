@@ -21,27 +21,20 @@ from mutagen.mp3 import MP3
 
 base_fs_dir = (os.path.dirname(os.path.realpath(__file__)) + '/')
 
-def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_enabled=True,hearthisat_refresh_enabled=False):
-	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled,hearthisat_refresh_enabled)
+def quick_refresh_link_database(youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
+	refresh_link_database(time.localtime()[0],youtube_refresh_enabled,soundcloud_refresh_enabled)
 	return
 
-def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True,hearthisat_refresh_enabled=False):
+def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundcloud_refresh_enabled=True):
 	artist_list = get_artists_to_download()
 	
 	youtube_artists = []
 	soundcloud_artists = []
-	hearthisat_artists = []
 	
 	for artist_row in artist_list:
 		if (artist_row['platform'] == 'soundcloud'):
 			try:
 				soundcloud_artists.append(artist_row['artist'])
-			except:
-				print('error with:' + str(artist_row['artist']))
-
-		elif (artist_row['platform'] == 'hearthisat'):
-			try:
-				hearthisat_artists.append(artist_row['artist'])
 			except:
 				print('error with:' + str(artist_row['artist']))
 
@@ -56,7 +49,6 @@ def refresh_link_database(starting_year=2019,youtube_refresh_enabled=True,soundc
 
 	sc_total_count = 0
 	yt_total_count = 0
-	ht_total_count = 0
 
 	#ht grouped with sc for now as same refresh process
 	if(youtube_refresh_enabled):
@@ -151,80 +143,6 @@ def sc_refresh_link_database_for_artist(artist_to_dl):
 					'url_link': url[0],
 					'title' : url[1],
 					'platform': 'soundcloud',
-					'artist': artist_to_dl,
-					'downloaded': 'false',
-					'uploaded' : 'false',
-					'classification' : 'TBA',
-				},
-				ConditionExpression='attribute_not_exists(url_link)'
-			)
-			counter += 1
-		except Exception as e:
-			#print('already in database');
-			continue
-	print('links added: ' + str(counter))
-	return counter
-
-def hta_refresh_link_database_for_artist(artist_to_dl):
-	non_mixes = ['reposts','likes','albums','sets','tracks','following','podcast']
-	options = Options()
-	options.add_argument('-headless')
-	driver = Firefox(executable_path='geckodriver', firefox_options=options)
-	url1 = 'https://hearthis.at/kuro-soundworks/' + artist_to_dl
-	driver.get(url1)
-
-	#autoscroll
-	pause = 5
-	last_height = driver.execute_script("return document.body.scrollHeight")
-
-	for zz in range(0,100):
-		print("scrolling")
-
-		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-		time.sleep(pause)
-		new_height = driver.execute_script("return document.body.scrollHeight")
-		if new_height == last_height:
-			break
-		last_height = new_height
-
-
-	html_doc = ""
-	html_doc = driver.page_source.encode('utf-8')
-	driver.close()
-
-	#print(html_doc)
-
-	soup = BeautifulSoup(html_doc, 'html.parser')
-	#print(soup)
-
-	link_frags = set()
-
-	for link in soup.find_all('a'):
-		if str(link).find('/' + artist_to_dl + '/') > 0:
-			if not (str(link.get('href')).endswith('/download/') or str(link.get('href')).endswith('/podcast/')):
-		 		if (str(link.get('href')) != ('/' + artist_to_dl + '/')):
-		 			link_frags.add(link.get('href'))
-
-	links_full = []
-	for link in link_frags:
-		full_link = 'https://hearthis.at' + str(link)
-			#print(full_link)
-		links_full.append([full_link,link.split('/')[2]])
-
-	print('Number of links: ' + str(len(links_full)))
-
-	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
-	table = dynamodb.Table('music_url_archive')
-
-	print('--- refreshing links in db')
-	counter = 0
-	for url in links_full:
-		try:
-			table.put_item(
-				Item={
-					'url_link': url[0],
-					'title' : url[1],
-					'platform': 'hearthisat',
 					'artist': artist_to_dl,
 					'downloaded': 'false',
 					'uploaded' : 'false',
@@ -343,7 +261,8 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	print('links added: ' + str(counter))
 	return counter
 
-# This is for testing purposes - refresh all youtube from 2015
+# This is for testing purposes - usage python refresh_lib.py artist year
+# artist should should be in the database already
 def main():
 
 	# artist_to_dl = []
@@ -355,8 +274,12 @@ def main():
 	# print(artist_to_dl)
 
 	# for artist in artist_to_dl:
-	yt_refresh_link_database_for_artist('KuroDeejay',2015)
-	print('Completed: ' + artist + '\n')
+
+	artist_to_dl = sys.argv[1]
+	year_to_begin = sys.argv[2]
+	print(f"{artist_to_dl} {year_to_begin}")
+	yt_refresh_link_database_for_artist(artist_to_dl,int(year_to_begin))
+	print('Completed: ' + artist_to_dl + '\n')
 
 
 	###############test

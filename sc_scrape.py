@@ -225,7 +225,7 @@ def download_information_only():
 	print(f"total number of non downloaded urls: {len(non_downloaded_sets)}")
 
 	for url in non_downloaded_sets:
-		print(f"{url['url_link']} downloaded:{url['downloaded']}")
+		print(f"{url['url_link']} {url['artist']} downloaded:{url['downloaded']}")
 
 	#import pdb; pdb.set_trace()
 
@@ -296,11 +296,11 @@ def song_info_download():
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
-	url_response = table.scan(FilterExpression=Attr('description').ne("true")&Attr('uploaded').eq("true")&Attr('platform').ne("hearthisat"))	
+	url_response = table.scan(FilterExpression=Attr('description').ne("true")&Attr('uploaded').eq("true"))	
 	urls_to_dl = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('description').ne("true")&Attr('uploaded').eq("true")&Attr('platform').ne("hearthisat"))
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('description').ne("true")&Attr('uploaded').eq("true"))
 		urls_to_dl.extend(url_response['Items'])
 
 	print ("all urls to download now")
@@ -355,22 +355,6 @@ def song_info_download_upload_one_song(url_row):
 			'writedescription': True,
 			'skip_download': True,
 			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
-			}
-			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
-				info_dict = ydl.extract_info(url, download=False)
-				filename = ydl.prepare_filename(info_dict)
-				name_only = filename[len(base_dir):].rsplit('.',1)[0]
-				ext = filename.rsplit('.')[-1:][0]
-				print('FILE IS:' + name_only)
-				ydl.download([url])
-				print("downloaded:" + url)
-
-
-		if (platform == 'hearthisat'):
-			soundcloud_ydl_opts = {
-			'writedescription': True,
-			'skip_download': True,
-			'outtmpl': base_fs_dir + 'staging/['+ artist +']%(title)s.%(ext)s',
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
 				info_dict = ydl.extract_info(url, download=False)
@@ -869,19 +853,19 @@ def main():
 		stopTime_refresh = arrow.utcnow()
 
 	if (to_run == 'refresh_sc'):
-		rl.quick_refresh_link_database(False,True,False)
+		rl.quick_refresh_link_database(False,True)
 		return
 
 	if (to_run == 'refresh_yt'):
-		rl.refresh_link_database(2020,True,False)
+		rl.refresh_link_database(2020,True)
 		return
 
 	if (to_run == 'qrefresh_yt'):
-		rl.quick_refresh_link_database(True,False,False)
+		rl.quick_refresh_link_database(True,False)
 		return
 
 	if (to_run == 'qrefresh'):
-		rl.quick_refresh_link_database(True,True,False)
+		rl.quick_refresh_link_database(True,True)
 		return
 
 	if (to_run == 'song_info_download'):
