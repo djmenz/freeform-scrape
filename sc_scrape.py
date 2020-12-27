@@ -97,16 +97,17 @@ def download_upload_all_new_links(platform_to_dl = 'youtube'):
 			print(e)
 			unsuccessful_downloads.append(url_row)
 
-	email_body = "successful downloads\n"
-	email_body += str([str(f"{x['url_link']} {x['title']}") for x in successful_downloads])
-	email_body += "\n####################################\n"
-	email_body += "unsuccessful downloads\n"
-	email_body += str([str(f"{x['url_link']} {x['title']}") for x in unsuccessful_downloads])
-	msg_client = boto3.client('sns',region_name='us-west-2')
-	topic = msg_client.create_topic(Name="crypto-news-daily")
-	topic_arn = topic['TopicArn']  # get its Amazon Resource Name
-	mail_subject = 'Freeform-scrape-failure-report'
-	msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject="unsuccessful downloads")
+	if (len(unsuccessful_downloads) > 0):
+		email_body = "successful downloads\n"
+		email_body += str([str(f"{x['url_link']} {x['title']}") for x in successful_downloads])
+		email_body += "\n####################################\n"
+		email_body += "unsuccessful downloads\n"
+		email_body += str([str(f"{x['url_link']} {x['title']}") for x in unsuccessful_downloads])
+		msg_client = boto3.client('sns',region_name='us-west-2')
+		topic = msg_client.create_topic(Name="crypto-news-daily")
+		topic_arn = topic['TopicArn']  # get its Amazon Resource Name
+		mail_subject = 'Freeform-scrape-failure-report'
+		msg_client.publish(TopicArn=topic_arn,Message=email_body,Subject="unsuccessful downloads")
 
 	return
 
@@ -207,9 +208,6 @@ def download_information_only():
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
-
-
-
 	#Get download items
 	url_response = table.scan()	
 	all_urls = url_response['Items']
@@ -226,7 +224,10 @@ def download_information_only():
 	print(f"total number of downloaded urls: {len(downloaded_sets)}")
 	print(f"total number of non downloaded urls: {len(non_downloaded_sets)}")
 
-	import pdb; pdb.set_trace()
+	for url in non_downloaded_sets:
+		print(f"{url['url_link']} downloaded:{url['downloaded']}")
+
+	#import pdb; pdb.set_trace()
 
 	return
 
