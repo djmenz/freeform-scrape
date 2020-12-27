@@ -169,6 +169,11 @@ def download_one_track(url_row):
 			soundcloud_ydl_opts = {
 			'writedescription': True,
 			'outtmpl': base_fs_dir + 'staging/[%(uploader)s]%(title)s.%(ext)s',
+			'postprocessors': [{
+					'key': 'FFmpegExtractAudio',
+					'preferredcodec': 'mp3',
+					'preferredquality': '192',
+			 }],
 			}
 			with youtube_dl.YoutubeDL(soundcloud_ydl_opts) as ydl:
 				info_dict = ydl.extract_info(url, download=False)
@@ -202,33 +207,26 @@ def download_information_only():
 	dynamodb = boto3.resource('dynamodb', region_name='ap-southeast-2')
 	table = dynamodb.Table('music_url_archive')
 
+
+
+
 	#Get download items
-	url_response = table.scan(FilterExpression=Attr('downloaded').eq("false"))	
-	urls_to_dl = url_response['Items']
+	url_response = table.scan()	
+	all_urls = url_response['Items']
 
 	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('downloaded').eq("false"))
-		urls_to_dl.extend(url_response['Items'])
+		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'])
+		all_urls.extend(url_response['Items'])
 
-	#Get track items
-	url_response = table.scan(FilterExpression=Attr('classification').eq("track"))	
-	tracks_downloaded = url_response['Items']
 
-	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('classification').eq("track"))
-		tracks_downloaded.extend(url_response['Items'])
 
-	#Get set items
-	url_response = table.scan(FilterExpression=Attr('classification').eq("set"))	
-	sets_downloaded = url_response['Items']
+	print(f"total number of urls: {len(all_urls)}")
+	downloaded_sets = [x for x in all_urls if x['downloaded'] == 'true']
+	non_downloaded_sets = [x for x in all_urls if x['downloaded'] != 'true']
+	print(f"total number of downloaded urls: {len(downloaded_sets)}")
+	print(f"total number of non downloaded urls: {len(non_downloaded_sets)}")
 
-	while 'LastEvaluatedKey' in url_response:
-		url_response = table.scan(ExclusiveStartKey=url_response['LastEvaluatedKey'],FilterExpression=Attr('classification').eq("set"))
-		sets_downloaded.extend(url_response['Items'])
-
-	print('Number of files to download:' + str(len(urls_to_dl)))
-	print('Number of tracks downloaded:' + str(len(tracks_downloaded)))
-	print('Number of sets downloaded:' + str(len(sets_downloaded)))
+	import pdb; pdb.set_trace()
 
 	return
 
@@ -574,7 +572,7 @@ def classify_single_track(link_to_classify, extension):
 			    },
 			    UpdateExpression="set downloaded = :r",
 			    ExpressionAttributeValues={
-			        ':r': 'skip',
+			        ':r': 'skip_u',
 			    },
 			    ReturnValues="UPDATED_NEW"
 			    )
