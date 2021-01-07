@@ -206,9 +206,9 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 	base_search_url = 'https://www.googleapis.com/youtube/v3/search?'
 
 
-	# Searches all years between 2019 2021
+	# change 2022 to 2023 at the end of 2021
 	years_RFC3339_pairs = []
-	for x in range(starting_year,2021):
+	for x in range(starting_year,2022):
 		start_year = (str(x)+'-01-01T00:00:00Z')
 		finish_year = (str(x+1)+'-01-01T00:00:00Z')
 		years_RFC3339_pairs.append([start_year,finish_year])
@@ -272,17 +272,9 @@ def yt_refresh_link_database_for_artist(artist_to_dl, starting_year):
 
 # This is for testing purposes - usage python refresh_lib.py artist year
 # artist should should be in the database already
+# Usage python3 refresh_lib.py [channelname] [year_to_begin]
+
 def main():
-
-	# artist_to_dl = []
-	# artist_list = get_artists_to_download()
-	# for artist in artist_list:
-	# 	if artist['platform'] == 'youtube':
-	# 		artist_to_dl.append(artist['artist'])
-	
-	# print(artist_to_dl)
-
-	# for artist in artist_to_dl:
 
 	artist_to_dl = sys.argv[1]
 	year_to_begin = sys.argv[2]
@@ -290,20 +282,6 @@ def main():
 	yt_refresh_link_database_for_artist(artist_to_dl,int(year_to_begin))
 	print('Completed: ' + artist_to_dl + '\n')
 
-
-	###############test
-	# s3 = boto3.client('s3')
-	# # S3 Get set size info
-	# resp = s3.list_objects_v2(Bucket='freeform-scrape', Prefix='set')
-	# set_info = resp['Contents']
-
-	# while 'NextContinuationToken' in resp:
-	# 	resp = s3.list_objects_v2(Bucket='freeform-scrape',ContinuationToken=resp['NextContinuationToken'],Prefix='set')
-	# 	set_info.extend(resp['Contents'])
-
-	# total_set_size = 0
-	# for set in set_info:
-	# 	print(set['Key'])
 
 	exit()
 	
